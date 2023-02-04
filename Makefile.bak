@@ -1,9 +1,0 @@
-#all: 	buildf7/DoomPlayer.elf
-all: 	build/DoomPlayer.elf
-
-buildf7/DoomPlayer.elf:
-	cmake -B buildf7 -DTARGET=STM32F769
-
-build/DoomPlayer.elf:
-	rm -rf build
-	cmake -B build -DTARGET=STM32H7B3
