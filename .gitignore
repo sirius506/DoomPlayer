@@ -70,10 +70,10 @@ build*
 */Drivers/CMSIS/DSP/DSP_Lib_TestSuite/
 */Drivers/CMSIS/DSP/Examples/
 */Drivers/CMSIS/Device/ST/*/Source/Templates/
-!*/Drivers/CMSIS/DSP/Lib/GCC/libarm_cortexM7lfdp_math.a
 */Drivers/CMSIS/NN/
 */Drivers/CMSIS/DSP/Source/
-*/Drivers/CMSIS/DSP/Lib/
+*/Drivers/CMSIS/DSP/Lib/GCC/*
+!*/Drivers/CMSIS/DSP/Lib/GCC/libarm_cortexM7lfdp_math.a
 */Drivers/CMSIS/DSP/PythonWrapper/
 */Drivers/CMSIS/RTOS/
 */Drivers/CMSIS/RTOS2/
