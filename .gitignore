@@ -18,9 +18,9 @@
 
 # Libraries
 *.lib
-*.a
 *.la
 *.lo
+iar*.a
 
 # Shared objects (inc. Windows DLLs)
 *.dll
@@ -38,15 +38,46 @@
 
 # Debug files
 *.dSYM/
+*.bak/
 *.su
 *.idb
 *.pdb
+*.swp
 
 # Kernel Module Compile Results
 *.mod*
 *.cmd
+*.jdebug
+*.jdebug.user
 .tmp_versions/
+.DS_Store
 modules.order
+games/
 Module.symvers
 Mkfile.old
 dkms.conf
+CMakeLists.txt.user
+CMakeCache.txt
+CMakeFiles
+CMakeScripts
+Testing
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps
+build*
+*/Drivers/CMSIS/DSP/DSP_Lib_TestSuite/
+*/Drivers/CMSIS/DSP/Examples/
+*/Drivers/CMSIS/Device/ST/*/Source/Templates/
+!*/Drivers/CMSIS/DSP/Lib/GCC/libarm_cortexM7lfdp_math.a
+*/Drivers/CMSIS/NN/
+*/Drivers/CMSIS/DSP/Source/
+*/Drivers/CMSIS/DSP/Lib/
+*/Drivers/CMSIS/DSP/PythonWrapper/
+*/Drivers/CMSIS/RTOS/
+*/Drivers/CMSIS/RTOS2/
+*/Drivers/CMSIS/Core/Template/
+*/Drivers/CMSIS/Core_A/
+*/Drivers/CMSIS/Lib/IAR
+*/Drivers/CMSIS/DSP/Lib/IAR

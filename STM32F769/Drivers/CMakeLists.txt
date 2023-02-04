@@ -1,0 +1,56 @@
+set(DRVSRCS
+  STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_hcd.c
+  STM32F7xx_HAL_Driver/Src/stm32f7xx_ll_usb.c
+  STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_crc.c
+  STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_crc_ex.c
+  STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_rcc.c
+  STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_rcc_ex.c
+  STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_flash.c
+  STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_flash_ex.c
+  STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_gpio.c
+  STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_dma.c
+  STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_dma2d.c
+  STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_dma_ex.c
+  STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_pwr.c
+  STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_dsi.c
+  STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_pwr_ex.c
+  STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_cortex.c
+  STM32F7xx_HAL_Driver/Src/stm32f7xx_hal.c
+  STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_hash.c
+  STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_i2c.c
+  STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_i2c_ex.c
+  STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_i2s.c
+  STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_jpeg.c
+  STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_exti.c
+  STM32F7xx_HAL_Driver/Src/stm32f7xx_ll_fmc.c
+  STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_sdram.c
+  STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_ltdc.c
+  STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_ltdc_ex.c
+  STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_qspi.c
+  STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_rtc.c
+  STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_rtc_ex.c
+  STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_sai.c
+  STM32F7xx_HAL_Driver/Src/stm32f7xx_ll_sdmmc.c
+  STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_sd.c
+  STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_spi.c
+  STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_spi_ex.c
+  STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_tim.c
+  STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_tim_ex.c
+  STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_uart.c
+  STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_uart_ex.c
+  BSP/stm32f769i_discovery_lcd.c
+  BSP/stm32f769i_discovery.c
+  BSP/stm32f769i_discovery_qspi.c
+  BSP/stm32f769i_discovery_audio.c
+  BSP/stm32f769i_discovery_sdram.c
+  BSP/stm32f769i_discovery_sd.c
+  BSP/stm32f769i_discovery_ts.c
+  BSP/Components/ft6x06/ft6x06.c
+  BSP/Components/otm8009a/otm8009a.c
+  BSP/Components/wm8994/wm8994.c
+  BSP/fatfs_platform.c
+  BSP/sd_diskio.c
+  BSP/board_if.c
+)
+
+add_library(drivers STATIC ${DRVSRCS})
