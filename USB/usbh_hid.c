@@ -82,11 +82,7 @@ void StartHIDTask(void *arg)
      {
        pclass->cState = 2;
 debug_printf("HID poll = %d\n", HID_Handle->poll);
-#if 0
        HID_Handle->timer = HID_Handle->poll;
-#else
-       HID_Handle->timer = 3;
-#endif
      }
   }
   else if (st == USBH_NOT_SUPPORTED)
@@ -207,12 +203,8 @@ static USBH_StatusTypeDef USBH_HID_InterfaceInit(USBH_ClassTypeDef *pclass, USBH
   if (pclass->cState)
     return USBH_FAIL;
 
-#if 0
-  interface = USBH_FindInterface(phost, pclass->ClassCode, HID_BOOT_CODE, 0xFFU);
-#else
   num = USBH_FindInterface(phost, pclass->ClassCode, 0xFFU, 0xFFU);
   interface = USBH_FindInterfaceIndex(phost, num, 0);
-#endif
 
   if ((interface == 0xFFU) || (interface >= USBH_MAX_NUM_IFDESC)) /* No Valid Interface */
   {
@@ -387,11 +379,7 @@ static USBH_StatusTypeDef USBH_HID_SOFProcess(USBH_ClassTypeDef *pclass, USBH_Ha
     }
     else
     {
-#if 0
       HID_Handle->timer = HID_Handle->poll;
-#else
-      HID_Handle->timer = 3;
-#endif
       osEventFlagsSet(pclass->classEventFlag, HID_SOF_FLAG);
     }
     break;

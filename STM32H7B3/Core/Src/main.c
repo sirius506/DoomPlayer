@@ -251,13 +251,8 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.PLL.PLLP = 2;
 
   /* SYSCLK = HSE / PLLM * PLLN / PLLP = 24 / 12 * 280 / 2 = 280MHz */
-#if 0
-  RCC_OscInitStruct.PLL.PLLQ = 3;
-  RCC_OscInitStruct.PLL.PLLR = 4;
-#else
   RCC_OscInitStruct.PLL.PLLQ = 5;	// 2
   RCC_OscInitStruct.PLL.PLLR = 2;
-#endif
   RCC_OscInitStruct.PLL.PLLRGE = RCC_PLL1VCIRANGE_1;
   RCC_OscInitStruct.PLL.PLLVCOSEL = RCC_PLL1VCOWIDE;
   RCC_OscInitStruct.PLL.PLLFRACN = 0;
