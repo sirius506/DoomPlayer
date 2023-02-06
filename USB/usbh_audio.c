@@ -84,7 +84,7 @@ extern void StartPlayerTask(void *arg);
   */
 
 static USBH_StatusTypeDef USBH_AUDIO_InterfaceInit(USBH_ClassTypeDef *pclass, USBH_HandleTypeDef *phost);
-static USBH_StatusTypeDef USBH_AUDIO_InterfaceDeInit(USBH_HandleTypeDef *phost);
+static USBH_StatusTypeDef USBH_AUDIO_InterfaceDeInit(USBH_ClassTypeDef *pclass, USBH_HandleTypeDef *phost);
 static USBH_StatusTypeDef USBH_AUDIO_SOFProcess(USBH_ClassTypeDef *pclass, USBH_HandleTypeDef *phost);
 
 static USBH_StatusTypeDef USBH_AUDIO_FindAudioStreamingIN(USBH_ClassTypeDef *pclass, USBH_HandleTypeDef *phost);
@@ -639,7 +639,7 @@ debug_printf("HP pipe = %d\n", AUDIO_Handle->headphone.Pipe);
   * @param  phost: Host handle
   * @retval USBH Status
   */
-static USBH_StatusTypeDef USBH_AUDIO_InterfaceDeInit(USBH_HandleTypeDef *phost)
+static USBH_StatusTypeDef USBH_AUDIO_InterfaceDeInit(USBH_ClassTypeDef *pclass, USBH_HandleTypeDef *phost)
 {
   AUDIO_HandleTypeDef *AUDIO_Handle = (AUDIO_HandleTypeDef *) phost->pActiveClassList->pData;
 

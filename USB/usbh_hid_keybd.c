@@ -74,7 +74,6 @@ EndBSPDependencies */
 /** @defgroup USBH_HID_KEYBD_Private_FunctionPrototypes
   * @{
   */
-void USBH_HID_KeybdDecode(HID_HandleTypeDef *HID_Handle);
 /**
   * @}
   */
