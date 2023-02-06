@@ -56,7 +56,6 @@ add_executable(DoomPlayer.elf
   ${TARGET}/Core/Src/system_${FAMILY}.c
   ${TARGET}/Core/Src/usb_host.c
   ${TARGET}/Core/Src/usbh_conf.c
-  ${TARGET}/app_layout.c
   RTT/SEGGER_RTT.c
   RTT/SEGGER_RTT_printf.c
   App/app_console.c
@@ -207,11 +206,11 @@ target_include_directories(middlewares PUBLIC
 target_compile_definitions(lvgl PUBLIC USE_HAL_DRIVER ${CPUDEV} ARM_MATH_CM7)
 
 target_link_libraries(DoomPlayer.elf PRIVATE
-  lvgl::lvgl
   usb
   doom
   middlewares
   drivers
+  lvgl::lvgl
   Fusion
   ${CMAKE_SOURCE_DIR}/${TARGET}/Drivers/CMSIS/DSP/Lib/GCC/libarm_cortexM7lfdp_math.a
 )
