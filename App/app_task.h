@@ -48,6 +48,7 @@ typedef enum {
   GUIEV_GAME_START,
   GUIEV_CHEAT_BUTTON,
   GUIEV_FFT_UPDATE,
+  GUIEV_PSEC_UPDATE,
   GUIEV_REBOOT,
   GUIEV_FLASH_GAME_SELECT,	// Flash game image selected
   GUIEV_SD_GAME_SELECT,		// SD game image selected
@@ -112,6 +113,7 @@ extern lv_obj_t * _lv_demo_music_main_create(lv_obj_t * parent, lv_group_t *g, l
 
 extern void _lv_demo_inter_pause_start();
 extern void app_spectrum_update(int v);
+extern void app_psec_update(int psec);
 
 extern int ReadMusicList(char *filename);
 extern void _lv_demo_music_list_btn_check(lv_obj_t *list, uint32_t track_id, bool state);

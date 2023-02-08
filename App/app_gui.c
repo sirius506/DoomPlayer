@@ -985,6 +985,9 @@ void StartLvglTask(void *argument)
       case GUIEV_FFT_UPDATE:
         app_spectrum_update(event.evval0);
         break;
+      case GUIEV_PSEC_UPDATE:
+        app_psec_update(event.evval0);
+        break;
       case GUIEV_CHEAT_BUTTON:
         if (D_GrabMouseCallback())	// Not in menu/demo mode
         {

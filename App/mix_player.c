@@ -273,7 +273,6 @@ static void drflac_close_fatfs(drflac* pFlac)
 }
 
 static const int frange[] = { 8, 45, 300, 600, 0 };
-//static const int frange[] = { 16, 90, 600, 1200, 0 };
 static int band_val[4];
 
 int fft_getband(int band)
@@ -369,7 +368,7 @@ static int process_fft(FFTINFO *fftInfo, AUDIO_STEREO *pmusic, int frames)
         {
           v += float_mag_buffer[i];
         }
-        if (v) v = v/MAGDIV;
+        if (v) v = v / MAGDIV;
         if (v < 0) v = 0;
         f_prev = f;
         *op++ = (int16_t)v;
@@ -399,6 +398,7 @@ void StartMixPlayerTask(void *args)
   int fft_count;
   GUI_EVENT guiev;
   int argval;
+  uint32_t psec;
 
   debug_printf("Player Started..\n");
 
@@ -416,9 +416,15 @@ void StartMixPlayerTask(void *args)
   allocationCallbacks.onFree = my_free;
 
   if (argval & MIXER_I2S_OUTPUT)
+  {
     pDriver = &i2s_output_driver;
+    mixInfo->rate = 44100;
+  }
   else
+  {
     pDriver = &usb_output_driver;
+    mixInfo->rate = 48000;
+  }
 
   pDriver->Init(pDriver);
   soundLockId = pDriver->soundLockId = osMutexNew(&attributes_sound_lock);
@@ -444,6 +450,7 @@ void StartMixPlayerTask(void *args)
         osDelay(10*1000);
       }
       pflac = drflac_open_fatfile(ctrl.arg, &allocationCallbacks);
+      mixInfo->ppos = mixInfo->psec = 0;
       fft_count = 0;
       flacInfo->loop_count = ctrl.option;
       debug_printf("MIX_PLAY: loop_count = %d\n", flacInfo->loop_count);
@@ -496,8 +503,10 @@ void StartMixPlayerTask(void *args)
       {
       case MIX_ST_PLAY_REQ:
         pDriver->MixSound(pDriver, 0, MusicFrameBuffer);
+        mixInfo->ppos += BUF_FRAMES/2;
         break;
       case MIX_ST_PLAY:
+        mixInfo->ppos += BUF_FRAMES/2;
         if ((flacInfo->loop_count != 0)  && (flacInfo->pcm_pos >= flacInfo->loop_end))
         {
 debug_printf("loop count = %d, (%d/%d)\n", flacInfo->loop_count, flacInfo->loop_end, flacInfo->pcm_pos);
@@ -560,6 +569,12 @@ debug_printf("ST_PLAY --> ST_IDLE @ FULL\n");
       default:
         break;
       }
+      psec = mixInfo->ppos / mixInfo->rate;
+      if (psec > mixInfo->psec)
+      {
+        mixInfo->psec = psec;
+        postGuiEventMessage(GUIEV_PSEC_UPDATE, psec, NULL, NULL);
+      }
       break;
     case MIX_FILL_FULL:
       pmusic = MusicFrameBuffer + BUF_FRAMES/2;
@@ -569,9 +584,11 @@ debug_printf("ST_PLAY --> ST_IDLE @ FULL\n");
       case MIX_ST_PLAY_REQ:
         pDriver->MixSound(pDriver, BUF_FRAMES/2, pmusic);
         mixInfo->state = MIX_ST_PLAY;
+        mixInfo->ppos += BUF_FRAMES/2;
         break;
       case MIX_ST_PLAY:
         num_read = drflac_read_pcm_frames_s16(pflac, BUF_FRAMES/2, (drflac_int16 *)pmusic);
+        mixInfo->ppos += BUF_FRAMES/2;
         if (num_read > 0)
         {
           flacInfo->pcm_pos += num_read;
@@ -640,6 +657,12 @@ debug_printf("ST_PLAY --> ST_IDLE @ FULL\n");
         break;
       default:
         break;
+      }
+      psec = mixInfo->ppos / mixInfo->rate;
+      if (psec > mixInfo->psec)
+      {
+        mixInfo->psec = psec;
+        postGuiEventMessage(GUIEV_PSEC_UPDATE, psec, NULL, NULL);
       }
       break;
     case MIX_FFT_DISABLE:

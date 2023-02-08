@@ -63,7 +63,6 @@ static void play_event_click_cb(lv_event_t * e);
 static void prev_click_event_cb(lv_event_t * e);
 static void next_click_event_cb(lv_event_t * e);
 static void menu_click_event_cb(lv_event_t * e);
-static void timer_cb(lv_timer_t * t);
 static void track_load(uint32_t id);
 static void stop_start_anim(lv_timer_t * t);
 static void album_fade_anim_cb(void * var, int32_t v);
@@ -85,7 +84,6 @@ static uint32_t spectrum_i_pause = 0;
 static uint32_t bar_ofs = 0;
 static uint32_t spectrum_lane_ofs_start = 0;
 static uint32_t bar_rot = 0;
-static uint32_t time_act;
 static lv_timer_t  * sec_counter_timer;
 static lv_timer_t  * inter_pause_timer;
 static const lv_font_t * font_small;
@@ -258,9 +256,6 @@ lv_obj_t * _lv_demo_music_main_create(lv_obj_t * parent, lv_group_t *g, lv_style
     lv_obj_set_grid_cell(handle_box, LV_GRID_ALIGN_STRETCH, 0, 2, LV_GRID_ALIGN_CENTER, 8, 1);
     lv_obj_set_grid_cell(spectrum_obj, LV_GRID_ALIGN_STRETCH, 1, 1, LV_GRID_ALIGN_CENTER, 1, 9);
 #endif
-
-    sec_counter_timer = lv_timer_create(timer_cb, 1000, NULL);
-    lv_timer_pause(sec_counter_timer);
 
     /*Animate in the content after the intro time*/
     lv_anim_t a;
@@ -849,7 +844,6 @@ static void track_load(uint32_t id)
     uint32_t track_len;
 
     spectrum_i = 0;
-    time_act = 0;
     spectrum_i_pause = 0;
     lv_slider_set_value(slider_obj, 0, LV_ANIM_OFF);
     lv_label_set_text(time_obj, "0:00");
@@ -1270,13 +1264,10 @@ static void next_click_event_cb(lv_event_t * e)
     }
 }
 
-
-static void timer_cb(lv_timer_t * t)
+void app_psec_update(int tv)
 {
-    LV_UNUSED(t);
-    time_act++;
-//    lv_label_set_text_fmt(time_obj, "%"LV_PRIu32":%02"LV_PRIu32, time_act / 60, time_act % 60);
-    lv_slider_set_value(slider_obj, time_act, LV_ANIM_ON);
+    if (slider_obj)
+      lv_slider_set_value(slider_obj, tv, LV_ANIM_ON);
 }
 
 #if 0

@@ -25,6 +25,9 @@ typedef enum {
 typedef struct {
   mix_state state;
   osMessageQueueId_t mixevqId;
+  uint32_t  rate;
+  uint32_t  ppos;		// Current play position in samples
+  uint32_t  psec;		// Current play position in seconds
 } MIX_INFO;
 
 typedef struct {
