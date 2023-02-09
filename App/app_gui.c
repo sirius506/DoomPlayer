@@ -10,6 +10,8 @@
 #include "usbh_hid.h"
 #include "jpeg_if.h"
 
+//#define USE_WAIT_CB
+
 extern int doom_main(int argc, char **argv);
 
 TASK_DEF(doomTask, 2400, osPriorityBelowNormal)
@@ -93,7 +95,9 @@ static void ex_disp_flush(lv_disp_drv_t *drv, const lv_area_t *area, lv_color_t 
   lv_draw_stm32_dma2d_buffer_copy(NULL,
         (lv_color_t *) lvgl_fb + area->y1 * LV_HOR_RES + area->x1,
         (lv_coord_t) LV_HOR_RES, area, color_p, area->x2 - area->x1 + 1, area);
+#ifndef USE_WAIT_CB
   lv_disp_flush_ready(drv);
+#endif
 }
 
 static void ex_disp_clean_dcache(lv_disp_drv_t *drv)
@@ -152,9 +156,11 @@ void lvtask_initialize(LTDC_HandleTypeDef *hltdc)
   lv_init();
 
   DMA2D_HANDLE.State = HAL_DMA2D_STATE_READY;
-//  __HAL_DMA2D_ENABLE_IT(&DMA2D_HANDLE, DMA2D_IT_TC);
+#ifdef USE_WAIT_CB
+  __HAL_DMA2D_ENABLE_IT(&DMA2D_HANDLE, DMA2D_IT_TC);
+#endif
 
-  dma2dsemId = osSemaphoreNew(1, 0, &attributes_dma2dsem);
+  dma2dsemId = osSemaphoreNew(1, 1, &attributes_dma2dsem);
   HAL_DMA2D_RegisterCallback(&DMA2D_HANDLE, HAL_DMA2D_TRANSFERCOMPLETE_CB_ID, dma2dCplt);
 
   lv_disp_draw_buf_init(&disp_buf_1, buf1_1, buf1_2, LCD_WIDTH * TFT_DRAW_HEIGHT);
@@ -164,7 +170,9 @@ void lvtask_initialize(LTDC_HandleTypeDef *hltdc)
   disp_drv.hor_res = LCD_WIDTH;
   disp_drv.ver_res = LCD_HEIGHT;
 
-  //disp_drv.wait_cb = drv_wait_cb;
+#ifdef USE_WAIT_CB
+  disp_drv.wait_cb = drv_wait_cb;
+#endif
   disp_drv.flush_cb = ex_disp_flush;
   disp_drv.clean_dcache_cb = ex_disp_clean_dcache;
 
