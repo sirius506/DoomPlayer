@@ -1,5 +1,5 @@
-#ifndef __PLAYER_H__
-#define __PLAYER_H__
+#ifndef __MPLAYER_H__
+#define __MPLAYER_H__
 
 #include "fatfs.h"
 #include "SDL.h"

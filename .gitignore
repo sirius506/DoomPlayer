@@ -6,6 +6,7 @@
 *.ko
 *.obj
 *.elf
+!bin/*/DoomPlayer.elf
 
 # Linker output
 *.ilk
