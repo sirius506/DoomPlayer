@@ -293,7 +293,7 @@ void Error_Handler(void);
 #define	HID_REQ_Pin	TEST2_Pin
 #define	HID_REQ_Port	TEST2_GPIO_Port
 #define	SLEEP_Pin	TEST3_Pin
-#define	SLEEP_Port	TEST2_GPIO_Port
+#define	SLEEP_Port	TEST3_GPIO_Port
 
 /* USER CODE BEGIN Private defines */
 
