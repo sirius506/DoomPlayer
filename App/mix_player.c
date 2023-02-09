@@ -13,6 +13,8 @@
 #define	DR_FLAC_NO_SIMD
 #define	DR_FLAC_NO_OGG
 
+#define	IDLE_PERIOD	50
+
 #define	DO_FFT
 
 #include "dr_flac.h"
@@ -494,6 +496,7 @@ void StartMixPlayerTask(void *args)
       break;
     case MIX_PAUSE:
       mixInfo->state = MIX_ST_IDLE;
+      mixInfo->idle_count = IDLE_PERIOD;
       break;
     case MIX_RESUME:
       mixInfo->state = MIX_ST_PLAY;
@@ -552,6 +555,7 @@ debug_printf("loop count = %d, (%d/%d)\n", flacInfo->loop_count, flacInfo->loop_
           else
           {
             mixInfo->state = MIX_ST_IDLE;
+            mixInfo->idle_count = IDLE_PERIOD;
 debug_printf("ST_PLAY --> ST_IDLE @ FULL\n");
 
             if (argval & MIXER_FFT_ENABLE)
@@ -628,6 +632,7 @@ debug_printf("ST_PLAY --> ST_IDLE @ FULL\n");
             GUI_EVENT guiev;
   
             mixInfo->state = MIX_ST_IDLE;
+            mixInfo->idle_count = IDLE_PERIOD;
 debug_printf("ST_PLAY --> ST_IDLE @ FULL\n");
 
             if (argval & MIXER_FFT_ENABLE)
@@ -651,6 +656,12 @@ debug_printf("ST_PLAY --> ST_IDLE @ FULL\n");
               postGuiEvent(&guiev);
               fft_count++;
             }
+          }
+          if (mixInfo->idle_count > 0)
+          {
+             mixInfo->idle_count--;
+             if (mixInfo->idle_count == 0)
+               fftInfo->samples = 0;
           }
         }
         pDriver->MixSound(pDriver, BUF_FRAMES/2, SilentBuffer);
@@ -677,6 +688,7 @@ debug_printf("FFT_DISABLE\n");
 debug_printf("MIX_HALT\n");
       drflac_close_fatfs(pflac);
       mixInfo->state = MIX_ST_IDLE;
+      mixInfo->idle_count = IDLE_PERIOD;
       break;
     case MIX_SET_VOLUME:
 debug_printf("SetVolume: %d\n", ctrl.arg);

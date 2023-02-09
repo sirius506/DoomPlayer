@@ -27,7 +27,8 @@ typedef struct {
   osMessageQueueId_t mixevqId;
   uint32_t  rate;
   uint32_t  ppos;		// Current play position in samples
-  uint32_t  psec;		// Current play position in seconds
+  uint16_t  psec;		// Current play position in seconds
+  uint16_t  idle_count;
 } MIX_INFO;
 
 typedef struct {
