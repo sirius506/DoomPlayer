@@ -56,7 +56,7 @@ const GUI_EVENT reboot_event = {
 };
 
 const WADPROP InvalidFlashGame =
- { 0, 0, "Game not written" };
+ { 0, 0, NULL, "Game not written" };
 
 /**
  * Draw buffers
