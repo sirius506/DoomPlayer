@@ -93,7 +93,7 @@ void I_Endoom(byte *endoom_data)
     extern void app_endoom();
 
     app_endoom(endoom_data);
-    osDelay(5000);
+    osDelay(2000);
 #endif
 }
 
