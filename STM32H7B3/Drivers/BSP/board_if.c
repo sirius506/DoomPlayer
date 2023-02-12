@@ -117,6 +117,7 @@ void Board_LCD_Init()
 void Board_GUI_LayerVisible(int alpha)
 {
   BSP_LCD_SetTransparency(0, 1, alpha);
+  board_lcd_mode = LCD_MODE_LVGL;
 }
 
 void Board_GUI_LayerInvisible()
