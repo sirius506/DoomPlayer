@@ -6,9 +6,16 @@
 #include "usbh_pipes.h"
 #include "usbh_hid_keybd.h"
 #include "usbh_hid_dualsense.h"
+#include "app_task.h"
 
 //#define	FLAG_TIMEOUT	5
 #define	FLAG_TIMEOUT	osWaitForever
+
+#define	KBDQ_SIZE	20
+
+static KBDEVENT kbdqBuffer[KBDQ_SIZE];
+MESSAGEQ_DEF(kbdq, kbdqBuffer, sizeof(kbdqBuffer))
+osMessageQueueId_t kbdqId;
 
 static USBH_StatusTypeDef USBH_HID_InterfaceInit(USBH_ClassTypeDef *pclass, USBH_HandleTypeDef *phost);
 static USBH_StatusTypeDef USBH_HID_InterfaceDeInit(USBH_ClassTypeDef *pclass, USBH_HandleTypeDef *phost);
@@ -56,6 +63,8 @@ void StartHIDTask(void *arg)
   HID_Handle->state = HID_INIT;
   HID_Handle->hid_mode = HID_MODE_LVGL;
   USBH_HID_ParseHIDDesc(&HID_Handle->HID_Desc, pclass->phost->device.CfgDesc_Raw);
+
+  HID_Handle->kbdqId = kbdqId = osMessageQueueNew(KBDQ_SIZE, sizeof(KBDEVENT), &attributes_kbdq);
 
   GrabUrb(pclass->phost);
 

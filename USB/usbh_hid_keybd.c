@@ -58,7 +58,6 @@ EndBSPDependencies */
 /** @defgroup USBH_HID_KEYBD_Private_Defines
   * @{
   */
-#define	KBDQ_SIZE	20
 
 /**
   * @}
@@ -82,10 +81,6 @@ EndBSPDependencies */
   * @{
   */
 
-static KBDEVENT kbdqBuffer[KBDQ_SIZE];
-MESSAGEQ_DEF(kbdq, kbdqBuffer, sizeof(kbdqBuffer))
-osMessageQueueId_t kbdqId;
-
 HID_KEYBD_Info_TypeDef    keybd_info;
 uint8_t                   keybd_rx_report_buf[USBH_HID_KEYBD_REPORT_SIZE];
 
@@ -102,7 +97,6 @@ USBH_StatusTypeDef USBH_HID_KeybdInit(USBH_ClassTypeDef *pclass, USBH_HandleType
   memset(&keybd_info, 0, sizeof(keybd_info));
 
   HID_Handle->pData = keybd_rx_report_buf;
-  HID_Handle->kbdqId = kbdqId = osMessageQueueNew(KBDQ_SIZE, sizeof(KBDEVENT), &attributes_kbdq);
 
   return USBH_OK;
 }
@@ -110,12 +104,6 @@ USBH_StatusTypeDef USBH_HID_KeybdInit(USBH_ClassTypeDef *pclass, USBH_HandleType
 #define	NUM_KEYS	6
 static uint8_t lastkeys[NUM_KEYS];
 static uint8_t lastmod;
-#if 0
-static uint8_t modcode[8] = {
- KEY_RCTRL, KEY_RSHIFT, KEY_RALT, 0,
- KEY_RCTRL, KEY_RSHIFT, KEY_RALT, 0,
-};
-#endif
 
 extern void send_key_event(HID_HandleTypeDef *HID_Handle, int evcode, int kbdcode, int modkey);
 extern void send_modkey_event(HID_HandleTypeDef *HID_Handle, int evcode, int bpos);
