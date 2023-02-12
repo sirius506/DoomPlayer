@@ -10,7 +10,6 @@ int SDL_Init(uint32_t flags)
 int SDL_Quit()
 {
   debug_printf("%s called.!\n", __FUNCTION__);
-  NVIC_SystemReset();
   postMainRequest(REQ_END_DOOM, NULL, 0);
   while (1)
    osDelay(100);

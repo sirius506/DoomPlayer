@@ -11,6 +11,7 @@ typedef enum {
   REQ_ERASE_FLASH,		// Erase OCTO SPI flash contents
   REQ_COPY_FLASH,		// Copy SD game image onto SPI flash
   REQ_END_DOOM,
+  REQ_DUMMY,
 } REQ_CODE;
 
 typedef struct {

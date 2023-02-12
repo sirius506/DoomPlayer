@@ -105,6 +105,7 @@ void StartDefaultTask(void *argv)
   char *errs1, *errs2;
   GUI_EVENT guiev;
   int res;
+  int wait_time;
 
   reqcmdqId = osMessageQueueNew(REQCMD_DEPTH, sizeof(REQUEST_CMD), &attributes_reqcmdq);
   shotqId = osMessageQueueNew(SHOTQ_DEPTH, sizeof(REQUEST_CMD), &attributes_shotq);
@@ -152,12 +153,15 @@ void StartDefaultTask(void *argv)
     while (1) osDelay(100);
   }
 
+  wait_time = osWaitForever;
+
   while (1)
   {
     REQUEST_CMD request;
     WADLIST *game;
 
-    osMessageQueueGet(reqcmdqId, &request, NULL, osWaitForever);
+    if (osMessageQueueGet(reqcmdqId, &request, NULL, wait_time) != osOK)
+      NVIC_SystemReset();
 
     switch (request.cmd)
     {
@@ -179,6 +183,13 @@ void StartDefaultTask(void *argv)
     case REQ_ERASE_FLASH:
       game = (WADLIST *) request.arg;
       CopyFlash(game, (uint32_t)res);
+      break;
+    case REQ_END_DOOM:
+      wait_time = 2000;
+      break;
+    case REQ_DUMMY:
+      if (wait_time != osWaitForever)
+        wait_time = 500;
       break;
     default:
       break;
@@ -209,6 +220,7 @@ void StartShotTask(void *argv)
 #ifdef USE_FATFS
       pfile = CreateJpegFile(fname);
 #endif
+      postMainRequest(REQ_DUMMY, NULL, 0);
       break;
     case SCREENSHOT_WRITE:
       debug_printf("SCREEN_WRITE %d @ %x\n", request.val, request.arg);
@@ -219,6 +231,7 @@ void StartShotTask(void *argv)
       }
 #endif
       save_jpeg_write_done();
+      postMainRequest(REQ_DUMMY, NULL, 0);
       break;
     case SCREENSHOT_CLOSE:
       debug_printf("SCREEN_CLOSE\n");
