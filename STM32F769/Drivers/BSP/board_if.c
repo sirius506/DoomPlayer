@@ -116,7 +116,6 @@ void Board_LCD_Init()
 void Board_GUI_LayerVisible(int alpha)
 {
   BSP_LCD_SetTransparency(1, alpha);
-  board_lcd_mode = LCD_MODE_LVGL;
 }
 
 void Board_GUI_LayerInvisible()
@@ -127,6 +126,7 @@ void Board_GUI_LayerInvisible()
 void Board_DOOM_LayerInvisible()
 {
   BSP_LCD_SetTransparency(0, 0);
+  board_lcd_mode = LCD_MODE_LVGL;
 }
 
 void Board_Touch_Init(int width, int height)
