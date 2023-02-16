@@ -954,6 +954,9 @@ static void spectrum_draw_event_cb(lv_event_t * e)
 {
     lv_event_code_t code = lv_event_get_code(e);
 
+#ifdef SPECTRUM_Pin
+    HAL_GPIO_WritePin(SPECTRUM_Port, SPECTRUM_Pin, GPIO_PIN_SET);
+#endif
     if(code == LV_EVENT_REFR_EXT_DRAW_SIZE) {
 #if LV_DEMO_MUSIC_LANDSCAPE
         lv_event_set_ext_draw_size(e, LV_HOR_RES);
@@ -1079,6 +1082,9 @@ static void spectrum_draw_event_cb(lv_event_t * e)
             lv_draw_polygon(draw_ctx, &draw_dsc, poly, 4);
         }
     }
+#ifdef SPECTRUM_Pin
+    HAL_GPIO_WritePin(SPECTRUM_Port, SPECTRUM_Pin, GPIO_PIN_RESET);
+#endif
 }
 
 #if 0

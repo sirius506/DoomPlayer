@@ -466,7 +466,13 @@ void StartMixPlayerTask(void *args)
 
       if (pflac)
       {
+#ifdef FLAC_Pin
+        HAL_GPIO_WritePin(FLAC_Port, FLAC_Pin, GPIO_PIN_SET);
+#endif
         num_read = drflac_read_pcm_frames_s16(pflac, BUF_FRAMES, (drflac_int16 *)MusicFrameBuffer);
+#ifdef FLAC_Pin
+        HAL_GPIO_WritePin(FLAC_Port, FLAC_Pin, GPIO_PIN_RESET);
+#endif
         if (num_read > 0)
         {
           int res;
@@ -517,7 +523,13 @@ debug_printf("loop count = %d, (%d/%d)\n", flacInfo->loop_count, flacInfo->loop_
           drflac_seek_to_pcm_frame(pflac, flacInfo->pcm_pos);
         }
         pmusic = MusicFrameBuffer;
+#ifdef FLAC_Pin
+        HAL_GPIO_WritePin(FLAC_Port, FLAC_Pin, GPIO_PIN_SET);
+#endif
         num_read = drflac_read_pcm_frames_s16(pflac, BUF_FRAMES/2, (drflac_int16 *)pmusic);
+#ifdef FLAC_Pin
+        HAL_GPIO_WritePin(FLAC_Port, FLAC_Pin, GPIO_PIN_RESET);
+#endif
         if (num_read > 0)
         {
           flacInfo->pcm_pos += num_read;
@@ -591,7 +603,13 @@ debug_printf("ST_PLAY --> ST_IDLE @ FULL\n");
         mixInfo->ppos += BUF_FRAMES/2;
         break;
       case MIX_ST_PLAY:
+#ifdef FLAC_Pin
+        HAL_GPIO_WritePin(FLAC_Port, FLAC_Pin, GPIO_PIN_SET);
+#endif
         num_read = drflac_read_pcm_frames_s16(pflac, BUF_FRAMES/2, (drflac_int16 *)pmusic);
+#ifdef FLAC_Pin
+        HAL_GPIO_WritePin(FLAC_Port, FLAC_Pin, GPIO_PIN_RESET);
+#endif
         mixInfo->ppos += BUF_FRAMES/2;
         if (num_read > 0)
         {

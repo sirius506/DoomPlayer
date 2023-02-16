@@ -80,6 +80,9 @@ extern uint8_t lvgl_fb[];
  */
 static void ex_disp_flush(lv_disp_drv_t *drv, const lv_area_t *area, lv_color_t *color_p)
 {
+#ifdef DISP_FLUSH_Pin
+  HAL_GPIO_WritePin(DISP_FLUSH_Port, DISP_FLUSH_Pin, GPIO_PIN_SET);
+#endif
   int32_t x1 = area->x1;
   int32_t x2 = area->x2;
   int32_t y1 = area->y1;
@@ -97,6 +100,9 @@ static void ex_disp_flush(lv_disp_drv_t *drv, const lv_area_t *area, lv_color_t 
         (lv_coord_t) LV_HOR_RES, area, color_p, area->x2 - area->x1 + 1, area);
 #ifndef USE_WAIT_CB
   lv_disp_flush_ready(drv);
+#endif
+#ifdef DISP_FLUSH_Pin
+  HAL_GPIO_WritePin(DISP_FLUSH_Port, DISP_FLUSH_Pin, GPIO_PIN_RESET);
 #endif
 }
 
@@ -452,6 +458,17 @@ static void lvgl_capture()
   lv_obj_invalidate(lv_scr_act());
   lv_refr_now(NULL);			// Force a call our screenshot callback
   disp->driver->flush_cb = flush_cb;     // restore the original callback function
+}
+
+void lv_timer_handler_hook()
+{
+#ifdef LV_TIMER_Pin
+  HAL_GPIO_WritePin(LV_TIMER_Port, LV_TIMER_Pin, GPIO_PIN_SET);
+#endif
+  lv_timer_handler();
+#ifdef LV_TIMER_Pin
+  HAL_GPIO_WritePin(LV_TIMER_Port, LV_TIMER_Pin, GPIO_PIN_RESET);
+#endif
 }
 
 /*
@@ -836,13 +853,13 @@ void StartLvglTask(void *argument)
         break;
       case GUIEV_ERASE_START:
         lv_obj_del(copys->mbox);
-        lv_timer_handler();
+        lv_timer_handler_hook();
         copys->bar = lv_bar_create(copys->screen);
         lv_obj_set_size(copys->bar, lv_pct(40), lv_pct(8));
         lv_obj_align(copys->bar, LV_ALIGN_TOP_MID, 0, lv_pct(55));
         lv_bar_set_value(copys->bar, 0, LV_ANIM_OFF);
         postMainRequest(REQ_ERASE_FLASH, sel_sd_game, 0);
-        lv_timer_handler();
+        lv_timer_handler_hook();
         break;
       case GUIEV_REDRAW_START:
 	/*
@@ -878,7 +895,7 @@ void StartLvglTask(void *argument)
           sprintf(sbuff, "%d%%", (int)event.evarg1);
           lv_bar_set_value(copys->bar, (int)event.evarg1, LV_ANIM_OFF);
           lv_label_set_text(copys->progress, sbuff);
-          lv_timer_handler();
+          lv_timer_handler_hook();
           break;
         }
         break;
@@ -906,7 +923,7 @@ void StartLvglTask(void *argument)
           sprintf(sbuff, "%d%%", (int)event.evarg1);
           lv_bar_set_value(copys->bar, (int)event.evarg1, LV_ANIM_OFF);
           lv_label_set_text(copys->progress, sbuff);
-          lv_timer_handler();
+          lv_timer_handler_hook();
           break;
         case OP_DONE:
           lv_obj_del(copys->operation);
@@ -1058,7 +1075,7 @@ void StartLvglTask(void *argument)
         debug_printf("%dx%d --> %d\n", endimg->header.w, endimg->header.h, img_offset);
         lv_obj_align(games->img, LV_ALIGN_TOP_MID, 0, img_offset);
         Board_GUI_LayerVisible(255);			// Enable LVGL screen layer
-        lv_timer_handler();
+        //lv_timer_handler();
         Board_DOOM_LayerInvisible();			// Disable DOOM layer
         break;
       case GUIEV_LVGL_CAPTURE:		/* Take snapshot of LVGL screen */
@@ -1080,7 +1097,7 @@ void StartLvglTask(void *argument)
     }
     else
     {
-      lv_timer_handler();
+      lv_timer_handler_hook();
     }
   }
 } 
