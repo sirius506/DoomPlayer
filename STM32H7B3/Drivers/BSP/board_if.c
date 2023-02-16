@@ -370,14 +370,16 @@ static const uint8_t cindex[4*16] = {
   0x00, 0xFF, 0xFF, 0xff,	// F: Bright White  #FFFFFF		
 };
 
-static void setGlyph(uint8_t *pwp, const uint8_t *gp, const txt_font_t *font, uint8_t attr)
+static void setGlyph(uint8_t *pwp, const uint32_t boffset, const txt_font_t *font, uint8_t attr)
 {
   uint8_t *wp;
+  const uint8_t *gbp;
   uint8_t maskBit;
   uint16_t fgColor, bgColor, color;
   int x, y;
 
-  maskBit = 0x01;
+  gbp = font->data + boffset / 8;
+  maskBit = 1 << (boffset & 7);
   fgColor = attr & 0x0F;
   bgColor = (attr >> 4) & 0x07;
 
@@ -388,10 +390,10 @@ static void setGlyph(uint8_t *pwp, const uint8_t *gp, const txt_font_t *font, ui
     {
       if (maskBit == 0)
       {
-        gp++;
+        gbp++;
         maskBit = 0x01;
       }
-      color = (*gp & maskBit)? fgColor : bgColor;
+      color = (*gbp & maskBit)? fgColor : bgColor;
       if (x & 1)
       {
         *wp++ |= color;
@@ -425,11 +427,10 @@ Board_Endoom(uint8_t *bp)
   if (pimg->data == NULL)
     debug_printf("Failed to allocate bitmap space.\n");
 
-  fbsize = font->w * font->h / 8;		// glyph bitmap size
+  fbsize = font->w * font->h;		// glyph bitmap size in bits
 
   uint8_t *pdsty;
   uint8_t *pwp;
-  const uint8_t *gp;
   int x, y;
 
   pwp = (uint8_t *)pimg->data;
@@ -442,8 +443,7 @@ Board_Endoom(uint8_t *bp)
     {
       cdata = *bp++;
       attr = *bp++ & 0x7F;
-      gp = font->data + cdata * fbsize;
-      setGlyph(pwp, gp, font, attr);
+      setGlyph(pwp, cdata * fbsize, font, attr);
       pwp += font->w / 2;
     }
     pdsty += font->w * ENDOOM_W * font->h / 2;
