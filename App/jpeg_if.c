@@ -7,7 +7,10 @@
 
 #define DO_POST
 
-#define	JPEG_OBSIZE	(20*1024)
+#define	JPEG_OBSIZE	(40*1024)
+
+#define	MIN_RGB	16
+#define	MAX_RGB	235
 
 #define JPEG_GREEN_OFFSET        5       /* Offset of the GREEN color in a pixel         */    
 #define JPEG_BYTES_PER_PIXEL     2       /* Number of bytes in a pixel                   */
@@ -154,6 +157,12 @@ static uint32_t JPEG_ARGB_MCU_YCbCr420_ConvertBlocks (uint8_t *pInBuffer,
         green = (*(pInAddr + refline + JPEG_GREEN_OFFSET/8)) ;
         blue  = (*(pInAddr + refline + JPEG_BLUE_OFFSET/8)) ;
 #endif
+        if (red < MIN_RGB) red = MIN_RGB;
+        if (green < MIN_RGB) green = MIN_RGB;
+        if (blue < MIN_RGB) blue = MIN_RGB;
+        if (red > MAX_RGB) red = MAX_RGB;
+        if (green > MAX_RGB) green = MAX_RGB;
+        if (blue > MAX_RGB) blue = MAX_RGB;
         ycomp  = (int32_t)(*(RED_Y_LUT + red)) + (int32_t)(*(GREEN_Y_LUT + green)) + (int32_t)(*(BLUE_Y_LUT + blue));
         cbcomp = (int32_t)(*(RED_CB_LUT + red)) + (int32_t)(*(GREEN_CB_LUT + green)) + (int32_t)(*(BLUE_CB_RED_CR_LUT + blue)) + 128;
         crcomp = (int32_t)(*(BLUE_CB_RED_CR_LUT + red)) + (int32_t)(*(GREEN_CR_LUT + green)) + (int32_t)(*(BLUE_CR_LUT + blue)) + 128;
@@ -175,6 +184,12 @@ static uint32_t JPEG_ARGB_MCU_YCbCr420_ConvertBlocks (uint8_t *pInBuffer,
         green = (*(pInAddr + refline + JPEG_BYTES_PER_PIXEL + JPEG_GREEN_OFFSET/8)) ;
         blue  = (*(pInAddr + refline + JPEG_BYTES_PER_PIXEL + JPEG_BLUE_OFFSET/8)) ;
 #endif  
+        if (red < MIN_RGB) red = MIN_RGB;
+        if (green < MIN_RGB) green = MIN_RGB;
+        if (blue < MIN_RGB) blue = MIN_RGB;
+        if (red > MAX_RGB) red = MAX_RGB;
+        if (green > MAX_RGB) green = MAX_RGB;
+        if (blue > MAX_RGB) blue = MAX_RGB;
         ycomp  = (int32_t)(*(RED_Y_LUT + red)) + (int32_t)(*(GREEN_Y_LUT + green)) + (int32_t)(*(BLUE_Y_LUT + blue));
         (*(pOutAddr + JPEG_ConvertorParams.Y_MCU_LUT[offset + 1]))  = (ycomp);
         
@@ -191,6 +206,12 @@ static uint32_t JPEG_ARGB_MCU_YCbCr420_ConvertBlocks (uint8_t *pInBuffer,
         green = (*(pInAddr + refline + JPEG_ConvertorParams.ScaledWidth + JPEG_GREEN_OFFSET/8)) ;
         blue  = (*(pInAddr + refline + JPEG_ConvertorParams.ScaledWidth + JPEG_BLUE_OFFSET/8)) ;
 #endif
+        if (red < MIN_RGB) red = MIN_RGB;
+        if (green < MIN_RGB) green = MIN_RGB;
+        if (blue < MIN_RGB) blue = MIN_RGB;
+        if (red > MAX_RGB) red = MAX_RGB;
+        if (green > MAX_RGB) green = MAX_RGB;
+        if (blue > MAX_RGB) blue = MAX_RGB;
         ycomp  = (int32_t)(*(RED_Y_LUT + red)) + (int32_t)(*(GREEN_Y_LUT + green)) + (int32_t)(*(BLUE_Y_LUT + blue));
         
         (*(pOutAddr + JPEG_ConvertorParams.Y_MCU_LUT[offset + JPEG_ConvertorParams.H_factor]))  = (ycomp);
@@ -208,6 +229,12 @@ static uint32_t JPEG_ARGB_MCU_YCbCr420_ConvertBlocks (uint8_t *pInBuffer,
         green = (*(pInAddr + refline + JPEG_ConvertorParams.ScaledWidth + JPEG_BYTES_PER_PIXEL + JPEG_GREEN_OFFSET/8)) ;
         blue  = (*(pInAddr + refline + JPEG_ConvertorParams.ScaledWidth + JPEG_BYTES_PER_PIXEL + JPEG_BLUE_OFFSET/8)) ;
 #endif
+        if (red < MIN_RGB) red = MIN_RGB;
+        if (green < MIN_RGB) green = MIN_RGB;
+        if (blue < MIN_RGB) blue = MIN_RGB;
+        if (red > MAX_RGB) red = MAX_RGB;
+        if (green > MAX_RGB) green = MAX_RGB;
+        if (blue > MAX_RGB) blue = MAX_RGB;
         ycomp  = (int32_t)(*(RED_Y_LUT + red)) + (int32_t)(*(GREEN_Y_LUT + green)) + (int32_t)(*(BLUE_Y_LUT + blue));
         (*(pOutAddr + JPEG_ConvertorParams.Y_MCU_LUT[offset + JPEG_ConvertorParams.H_factor + 1]))  = (ycomp);
         
@@ -298,6 +325,12 @@ static uint32_t JPEG_ARGB_MCU_YCbCr422_ConvertBlocks (uint8_t *pInBuffer,
         green = (*(pInAddr + refline + JPEG_GREEN_OFFSET/8)) ;
         blue  = (*(pInAddr + refline + JPEG_BLUE_OFFSET/8)) ;
 #endif
+        if (red < MIN_RGB) red = MIN_RGB;
+        if (green < MIN_RGB) green = MIN_RGB;
+        if (blue < MIN_RGB) blue = MIN_RGB;
+        if (red > MAX_RGB) red = MAX_RGB;
+        if (green > MAX_RGB) green = MAX_RGB;
+        if (blue > MAX_RGB) blue = MAX_RGB;
         ycomp  = (int32_t)(*(RED_Y_LUT + red)) + (int32_t)(*(GREEN_Y_LUT + green)) + (int32_t)(*(BLUE_Y_LUT + blue));
         cbcomp = (int32_t)(*(RED_CB_LUT + red)) + (int32_t)(*(GREEN_CB_LUT + green)) + (int32_t)(*(BLUE_CB_RED_CR_LUT + blue)) + 128;
         crcomp = (int32_t)(*(BLUE_CB_RED_CR_LUT + red)) + (int32_t)(*(GREEN_CR_LUT + green)) + (int32_t)(*(BLUE_CR_LUT + blue)) + 128;
@@ -319,6 +352,12 @@ static uint32_t JPEG_ARGB_MCU_YCbCr422_ConvertBlocks (uint8_t *pInBuffer,
         green = (*(pInAddr + refline + JPEG_BYTES_PER_PIXEL + JPEG_GREEN_OFFSET/8)) ;
         blue  = (*(pInAddr + refline + JPEG_BYTES_PER_PIXEL + JPEG_BLUE_OFFSET/8)) ;
 #endif
+        if (red < MIN_RGB) red = MIN_RGB;
+        if (green < MIN_RGB) green = MIN_RGB;
+        if (blue < MIN_RGB) blue = MIN_RGB;
+        if (red > MAX_RGB) red = MAX_RGB;
+        if (green > MAX_RGB) green = MAX_RGB;
+        if (blue > MAX_RGB) blue = MAX_RGB;
         ycomp  = (int32_t)(*(RED_Y_LUT + red)) + (int32_t)(*(GREEN_Y_LUT + green)) + (int32_t)(*(BLUE_Y_LUT + blue));
         (*(pOutAddr + JPEG_ConvertorParams.Y_MCU_LUT[offset + 1]))  = ycomp;
         
@@ -408,6 +447,12 @@ static uint32_t JPEG_ARGB_MCU_YCbCr444_ConvertBlocks (uint8_t *pInBuffer,
         green = (*(pInAddr + refline + JPEG_GREEN_OFFSET/8)) ;
         blue  = (*(pInAddr + refline + JPEG_BLUE_OFFSET/8)) ;
 #endif
+        if (red < MIN_RGB) red = MIN_RGB;
+        if (green < MIN_RGB) green = MIN_RGB;
+        if (blue < MIN_RGB) blue = MIN_RGB;
+        if (red > MAX_RGB) red = MAX_RGB;
+        if (green > MAX_RGB) green = MAX_RGB;
+        if (blue > MAX_RGB) blue = MAX_RGB;
         ycomp  = (int32_t)(*(RED_Y_LUT + red)) + (int32_t)(*(GREEN_Y_LUT + green)) + (int32_t)(*(BLUE_Y_LUT + blue));
         cbcomp = (int32_t)(*(RED_CB_LUT + red)) + (int32_t)(*(GREEN_CB_LUT + green)) + (int32_t)(*(BLUE_CB_RED_CR_LUT + blue)) + 128;
         crcomp = (int32_t)(*(BLUE_CB_RED_CR_LUT + red)) + (int32_t)(*(GREEN_CR_LUT + green)) + (int32_t)(*(BLUE_CR_LUT + blue)) + 128;
