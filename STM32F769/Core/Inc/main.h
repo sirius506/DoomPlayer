@@ -388,6 +388,7 @@ void Error_Handler(void);
 #define	TEST3_Pin	GPIO_PIN_6
 #define	TEST3_GPIO_Port	GPIOF
 
+#ifdef USB_TEST
 #define	SOF_Pin		TEST0_Pin
 #define	SOF_Port	TEST0_GPIO_Port
 #define	AUDIO_REQ_Pin	TEST1_Pin
@@ -396,6 +397,16 @@ void Error_Handler(void);
 #define	HID_REQ_Port	TEST2_GPIO_Port
 #define	SLEEP_Pin	TEST3_Pin
 #define	SLEEP_Port	TEST3_GPIO_Port
+#else
+#define SPECTRUM_Pin    TEST0_Pin
+#define SPECTRUM_Port   TEST0_GPIO_Port
+#define LV_TIMER_Pin    TEST1_Pin
+#define LV_TIMER_Port   TEST1_GPIO_Port
+#define FLAC_Pin        TEST2_Pin
+#define FLAC_Port       TEST2_GPIO_Port
+#define SLEEP_Pin       TEST3_Pin
+#define	SLEEP_Port	TEST3_GPIO_Port
+#endif
 
 /* USER CODE END Private defines */
 

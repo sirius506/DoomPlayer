@@ -452,29 +452,29 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOH_CLK_ENABLE();
 
 
-#ifdef SOF_Pin
-  HAL_GPIO_WritePin(SOF_Port, SOF_Pin, GPIO_PIN_RESET);
-  GPIO_InitStruct.Pin = SOF_Pin;
+#ifdef TEST0_Pin
+  HAL_GPIO_WritePin(TEST0_GPIO_Port, TEST0_Pin, GPIO_PIN_RESET);
+  GPIO_InitStruct.Pin = TEST0_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-  HAL_GPIO_Init(SOF_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(TEST0_GPIO_Port, &GPIO_InitStruct);
 #endif
-#ifdef AUDIO_REQ_Pin
-  HAL_GPIO_WritePin(AUDIO_REQ_Port, AUDIO_REQ_Pin, GPIO_PIN_RESET);
-  GPIO_InitStruct.Pin = AUDIO_REQ_Pin;
+#ifdef TEST1_Pin
+  HAL_GPIO_WritePin(TEST1_GPIO_Port, TEST1_Pin, GPIO_PIN_RESET);
+  GPIO_InitStruct.Pin = TEST1_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-  HAL_GPIO_Init(AUDIO_REQ_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(TEST1_GPIO_Port, &GPIO_InitStruct);
 #endif
-#ifdef HID_REQ_Pin
-  HAL_GPIO_WritePin(HID_REQ_Port, HID_REQ_Pin, GPIO_PIN_RESET);
-  GPIO_InitStruct.Pin = HID_REQ_Pin;
+#ifdef TEST2_Pin
+  HAL_GPIO_WritePin(TEST2_GPIO_Port, TEST2_Pin, GPIO_PIN_RESET);
+  GPIO_InitStruct.Pin = TEST2_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-  HAL_GPIO_Init(HID_REQ_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(TEST2_GPIO_Port, &GPIO_InitStruct);
 #endif
 #ifdef TEST3_Pin
   HAL_GPIO_WritePin(TEST3_GPIO_Port, TEST3_Pin, GPIO_PIN_RESET);

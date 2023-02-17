@@ -97,6 +97,27 @@ __weak void vApplicationMallocFailedHook(void)
 }
 /* USER CODE END 5 */
 
+/* USER CODE BEGIN PREPOSTSLEEP */
+__weak void PreSleepProcessing(uint32_t ulExpectedIdleTime)
+{
+/* place for user code */
+#ifdef SLEEP_Pin
+  HAL_GPIO_WritePin(SLEEP_Port, SLEEP_Pin, GPIO_PIN_RESET);
+#endif
+
+  /*Enter to sleep Mode using the HAL function HAL_PWR_EnterSLEEPMode with WFI instruction*/
+  HAL_PWR_EnterSLEEPMode(PWR_MAINREGULATOR_ON, PWR_SLEEPENTRY_WFI);
+}
+
+__weak void PostSleepProcessing(uint32_t ulExpectedIdleTime)
+{
+/* place for user code */
+#ifdef SLEEP_Pin
+  HAL_GPIO_WritePin(SLEEP_Port, SLEEP_Pin, GPIO_PIN_SET);
+#endif
+}
+/* USER CODE END PREPOSTSLEEP */
+
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */
 
