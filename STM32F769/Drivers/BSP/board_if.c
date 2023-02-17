@@ -413,7 +413,7 @@ static void setGlyph(uint8_t *pwp, const uint32_t boffset, const txt_font_t *fon
 lv_img_dsc_t *
 Board_Endoom(uint8_t *bp)
 {
-  const txt_font_t *font = &tft_font;
+  const txt_font_t *font = &normal_font;
   lv_img_dsc_t *pimg;
   uint8_t cdata, attr;
   int fbsize, nb;
