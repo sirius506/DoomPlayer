@@ -1,6 +1,15 @@
 # Doom Player
-Doom Player is DOOM Music/SoundrGame player for STM32H7B3I-DK and 32F769IDiscovery boards.
+
+![startup_LVGL](https://user-images.githubusercontent.com/12758516/218339900-31bd464d-3fbf-48eb-a38c-15aa8c6d7b69.jpg)
+
+Doom Player is DOOM Music/SoundrGame player for STM32H7B3I-DK and STM32F769I-DISCO boards.
 Game part is based on [Chocolate-doom 3.0.1](https://www.chocolate-doom.org/).
+
+![music_LVGL](https://user-images.githubusercontent.com/12758516/218339999-62f67c08-b343-4a72-9c57-33ed63e5c785.jpg)
+
+![sound_LVGL](https://user-images.githubusercontent.com/12758516/218340140-58879f46-37b1-4568-a8f7-49c40dc77419.jpg)
+
+![sc004_DOOM](https://user-images.githubusercontent.com/12758516/218340020-90dcee30-518c-4d71-a515-76e0eeaa549a.jpg)
 
 ## Features
 * [LVGL](https://github.com/lvgl/lvgl) based GUI operation.
@@ -14,6 +23,8 @@ Game part is based on [Chocolate-doom 3.0.1](https://www.chocolate-doom.org/).
 * Runs on the FreeRTOS. It allows us LVGL GUI runs while Chocolate-Doom is running and provide Cheat code screen feature.
 * Sreenshot by User button on the Discovery board. Screen images are JPEG encoded and saved on the SD card.
 
+Please refer [Wiki pages](https://github.com/sirius506/DoomPlayer/wiki) for more descriptions and screen shot images.
+
 ## Binary Installation
 * Write the DoomPlayer.elf image under the bin directory to the target Disovery board's MCU flash. You can use STM32Prog for the operation.
 * Prepare formated SD card and create '/GameData' directory. Copy all files under the GameData directory in this repo to the SD card. You also need to copy FLAC format music pack files and supported DOOM game WAD files. Read 'GameData/README.md' for details.
@@ -24,64 +35,3 @@ Game part is based on [Chocolate-doom 3.0.1](https://www.chocolate-doom.org/).
 * Supply the power. It is recommended to avoid to use STLINK position on board power selection, since DualSense consumes the power and it may result as USB host port over current.
 * When system is initialized, DOOM games available on the flash and SD cards are listed on the LCD. Select green colored flash game to start the player, or choose one of SD card game to re-write the flash contents.
 
-## DualSense
-DualSense controller can be used to control LVGL GUI and Doom Game.
-It also supports features below.
-
-* Music/Sound output through Headphone jack. Sound output also generates vibration.
-* Light bar and player LEDs changes its color and blightness while music is playing.
-* While DOOM game mode, Light bar indicates DOOM guy's health status.
-
-For controler button operation, refer following tables.
-
-### LVGL GUI
-
-Buttons are mapped to keyboard input as shown below.
-
-| Button | LVGL Key |
-| ------ | -------- |
-| Up | LV_KEY_UP |
-| Down | LV_KEY_DOWN |
-| Left | LV_KEY_PREV |
-| Right | LV_KEY_NEXT |
-| Circle | LV_KEY_ENTER |
-| Square | LV_KEY_ENTER |
-| Cross | LV_KEY_DEL |
-| L1 | LV_KEY_LEFT |
-| R1 | LV_KEY_RIGHT |
-
-### DOOM
-
-DualSense controller is treated as joystick device and buttons can be used
-as show below table.
-
-| Button | Function |
-| ------ | -------- |
-| Up | Move forward |
-| Down | Move backward |
-| Left | Turn left |
-| Right | Turn right |
-| Square | Fire |
-| Circle | Use |
-| L1 | Prev weapon |
-| R1 | Next weapon |
-| L2 | Strafe left |
-| R2 | Strafe right |
-| PS | Menu on/ff |
-| Create | Map on/off |
-
-## SD Card
-
-SD card directory structure is shown in below.
-
-	+- GameData -+-  All game config and WAD files are stored
-	|            |
-	|            +-  doom1-music	DOOM1 FLAC music files
-	|            |
-	|            +-  doom2-music  DOOM2 FLAC music files
-	|            |
-	|            +-  tnt-music    TNT FLC music files
-	|
-	+ Screen -- Screen capture files are stored
-	|
-	+ savegames -- Saved doom game data
