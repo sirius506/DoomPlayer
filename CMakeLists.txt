@@ -98,7 +98,6 @@ add_executable(DoomPlayer.elf
   ${STARTUP}
 )
 
-
 FetchContent_Declare(
   drlib
   GIT_REPOSITORY https://github.com/mackron/dr_libs.git
@@ -107,7 +106,7 @@ FetchContent_Declare(
 FetchContent_Declare(
   lvgl
   GIT_REPOSITORY https://github.com/lvgl/lvgl.git
-  GIT_TAG 5545ffc9257808ee26eac833ec5326706cdf2007
+  GIT_TAG f29514aa5c34d84f69a7ed30835bbffc5cbd515c
 )
 
 FetchContent_MakeAvailable(drlib lvgl)
