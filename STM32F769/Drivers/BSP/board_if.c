@@ -93,8 +93,12 @@ static SECTION_DTCMRAM QSPI_Info QSPI_FlashInfo;
 SECTION_AHBSRAM uint32_t saved_palette[256];
 SECTION_FBRAM   uint8_t  saved_doom_screen[DOOM_SCWIDTH*DOOM_SCHEIGHT];
 SECTION_FBRAM   uint16_t RGB_Doom_Screen[DOOM_SCWIDTH*DOOM_SCHEIGHT];
+SECTION_FBRAM   uint16_t lvgl_alpha_screen[DOOM_SCWIDTH*DOOM_SCHEIGHT];
+
+extern uint16_t lvgl_fb[];
 
 static volatile uint8_t doom_dump_request;
+static int gui_alpha;
 
 void Board_SDRAM_Init()
 {
@@ -116,11 +120,13 @@ void Board_LCD_Init()
 void Board_GUI_LayerVisible(int alpha)
 {
   BSP_LCD_SetTransparency(1, alpha);
+  gui_alpha = alpha;
 }
 
 void Board_GUI_LayerInvisible()
 {
   BSP_LCD_SetTransparency(1, 0);
+  gui_alpha = 0;
 }
 
 void Board_DOOM_LayerInvisible()
@@ -375,7 +381,7 @@ static const uint8_t cindex[4*16] = {
 static void setGlyph(uint8_t *pwp, const uint32_t boffset, const txt_font_t *font, uint8_t attr)
 {
   uint8_t *wp;
-  uint8_t *gbp;
+  const uint8_t *gbp;
   uint8_t maskBit;
   uint16_t fgColor, bgColor, color;
   int x, y;
@@ -416,7 +422,7 @@ Board_Endoom(uint8_t *bp)
   const txt_font_t *font = &normal_font;
   lv_img_dsc_t *pimg;
   uint8_t cdata, attr;
-  int fbsize, nb;
+  int fbsize;
 
   pimg = &Endoom_Image;
   pimg->header.always_zero = 0;
@@ -433,7 +439,6 @@ Board_Endoom(uint8_t *bp)
 
   uint8_t *pdsty;
   uint8_t *pwp;
-  const uint8_t *gp;
   int x, y;
 
   pwp = (uint8_t *)pimg->data;
@@ -475,41 +480,79 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 uint8_t *Board_DoomCapture()
 {
   int i;
+  uint16_t *wp;
 
   while (DMA2D->CR & DMA2D_CR_START)
     ;
 
-  DMA2D->CR = 0;
-  for (i = 0; i < 256; i++)
-    DMA2D->FGCLUT[i] = saved_palette[i];
+  if (gui_alpha)	// LVGL layer is visible
+  {
+    /* Convert lvgl_fb contents to ARGB1555 format */
+    SCB_CleanInvalidateDCache();
+    DMA2D->CR = 0; 
+    DMA2D->OOR = 0; 
+    DMA2D->FGPFCCR = (gui_alpha << 24) | DMA2D_INPUT_RGB565;
+    wp = lvgl_fb + (LCD_HEIGHT-DOOM_SCHEIGHT)/2*LCD_WIDTH + (LCD_WIDTH-DOOM_SCWIDTH)/2;
+    DMA2D->FGMAR = (uint32_t) wp;
+    DMA2D->FGOR = LCD_WIDTH-DOOM_SCWIDTH;
+    DMA2D->OMAR = (uint32_t)lvgl_alpha_screen;
+    DMA2D->OPFCCR = DMA2D_OUTPUT_ARGB1555;
+    DMA2D->NLR = (DOOM_SCWIDTH << DMA2D_NLR_PL_Pos) | (DOOM_SCHEIGHT << DMA2D_NLR_NL_Pos);
+  
+    DMA2D->CR |= DMA2D_M2M_PFC | DMA2D_CR_START;
+    while (DMA2D->CR & DMA2D_CR_START)
+      ;
+    
+    /* Make green pixels to transparent */
+    for (wp = lvgl_alpha_screen; wp < &lvgl_alpha_screen[DOOM_SCWIDTH*DOOM_SCHEIGHT]; wp++)
+    {
+      /* 1000 0011 1110 0000 */
+      if (*wp == 0x83E0) 
+        *wp = 0x03E0;
+    }
+    SCB_CleanInvalidateDCache();
+    /* Load palette */
+    DMA2D->CR = 0;
+    for (i = 0; i < 256; i++)
+      DMA2D->BGCLUT[i] = saved_palette[i];
 
-  SCB_CleanInvalidateDCache();
-  /* Convert L8 format image to RGB565 format */
-#if 0
-  hdma2d->Instance->CR = 0;
-  hdma2d->Instance->FGOR = 0; 
-  hdma2d->Instance->OOR = 0; 
-  hdma2d->Instance->FGPFCCR = (255 << 8) | DMA2D_INPUT_L8;
-  hdma2d->Instance->FGMAR = (uint32_t)saved_doom_screen;
-  hdma2d->Instance->OMAR = (uint32_t)RGB_Doom_Screen;
-  hdma2d->Instance->OPFCCR = DMA2D_OUTPUT_RGB565;
-  hdma2d->Instance->NLR = (LCD_WIDTH << DMA2D_NLR_PL_Pos) | (LCD_HEIGHT << DMA2D_NLR_NL_Pos);
+    /* Blend Doom screen and lvgl screen */
+    DMA2D->CR = 0;
+    DMA2D->FGOR = 0;
+    DMA2D->BGOR = 0;
+    DMA2D->FGPFCCR = DMA2D_INPUT_ARGB1555;
+    DMA2D->FGMAR = (uint32_t)lvgl_alpha_screen;
+    DMA2D->BGPFCCR = (255 << 8) | DMA2D_INPUT_L8;
+    DMA2D->BGMAR = (uint32_t)saved_doom_screen;
+    DMA2D->OMAR = (uint32_t)RGB_Doom_Screen;
+    DMA2D->OPFCCR = DMA2D_OUTPUT_RGB565;
+    DMA2D->NLR = (DOOM_SCWIDTH << DMA2D_NLR_PL_Pos) | (DOOM_SCHEIGHT << DMA2D_NLR_NL_Pos);
 
-  hdma2d->Instance->CR |= DMA2D_M2M_PFC | DMA2D_CR_START;
-#else
-  DMA2D->CR = 0;
-  DMA2D->FGOR = 0; 
-  DMA2D->OOR = 0; 
-  DMA2D->FGPFCCR = (255 << 8) | DMA2D_INPUT_L8;
-  DMA2D->FGMAR = (uint32_t)saved_doom_screen;
-  DMA2D->OMAR = (uint32_t)RGB_Doom_Screen;
-  DMA2D->OPFCCR = DMA2D_OUTPUT_RGB565;
-  DMA2D->NLR = (DOOM_SCWIDTH << DMA2D_NLR_PL_Pos) | (DOOM_SCHEIGHT << DMA2D_NLR_NL_Pos);
-
-  DMA2D->CR |= DMA2D_M2M_PFC | DMA2D_CR_START;
-#endif
-  while (DMA2D->CR & DMA2D_CR_START)
-    ;
+    DMA2D->CR |= DMA2D_M2M_BLEND | DMA2D_CR_START;
+    while (DMA2D->CR & DMA2D_CR_START)
+      ;
+  }
+  else
+  {
+    DMA2D->CR = 0;
+    for (i = 0; i < 256; i++)
+      DMA2D->FGCLUT[i] = saved_palette[i];
+  
+    SCB_CleanInvalidateDCache();
+    /* Convert L8 format image to RGB565 format */
+    DMA2D->CR = 0;
+    DMA2D->FGOR = 0; 
+    DMA2D->OOR = 0; 
+    DMA2D->FGPFCCR = (255 << 8) | DMA2D_INPUT_L8;
+    DMA2D->FGMAR = (uint32_t)saved_doom_screen;
+    DMA2D->OMAR = (uint32_t)RGB_Doom_Screen;
+    DMA2D->OPFCCR = DMA2D_OUTPUT_RGB565;
+    DMA2D->NLR = (DOOM_SCWIDTH << DMA2D_NLR_PL_Pos) | (DOOM_SCHEIGHT << DMA2D_NLR_NL_Pos);
+  
+    DMA2D->CR |= DMA2D_M2M_PFC | DMA2D_CR_START;
+    while (DMA2D->CR & DMA2D_CR_START)
+      ;
+  }
   SCB_CleanInvalidateDCache();
   return (uint8_t *)RGB_Doom_Screen;
 }

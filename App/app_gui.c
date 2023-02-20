@@ -18,9 +18,6 @@ TASK_DEF(doomTask, 2400, osPriorityBelowNormal)
 
 extern DMA2D_HandleTypeDef DMA2D_HANDLE;
 extern LTDC_HandleTypeDef LTDC_HANDLE;
-extern void lv_draw_stm32_dma2d_buffer_copy(lv_draw_ctx_t * draw_ctx,
-                     void * dest_buf, lv_coord_t dest_stride, const lv_area_t * dest_area,
-                     void * src_buf, lv_coord_t src_stride, const lv_area_t * src_area);
 
 #define GUIEVQ_DEPTH     10
 
@@ -75,6 +72,27 @@ static int lvgl_active;
 
 extern uint8_t lvgl_fb[];
 
+static void dma2d_buffer_copy(void * dest_buf, lv_coord_t dest_stride, const lv_area_t * dest_area,
+                     void * src_buf, lv_coord_t src_stride, const lv_area_t * src_area)
+{
+  int32_t dest_w = lv_area_get_width(dest_area);
+  int32_t dest_h = lv_area_get_height(dest_area);
+
+  DMA2D->CR = 0x0;
+  DMA2D->FGPFCCR = CM_RGB565;
+  DMA2D->FGMAR = (uint32_t)src_buf;
+  DMA2D->FGOR = src_stride - dest_w;
+  DMA2D->OMAR = (uint32_t)dest_buf;
+  DMA2D->OOR = dest_stride - dest_w;
+  DMA2D->NLR = (dest_w << DMA2D_NLR_PL_Pos) | (dest_h << DMA2D_NLR_NL_Pos);
+
+#ifdef USE_WAIT_CB
+  DMA2D->CR |= DMA2D_CR_TCIE | DMA2D_CR_START;
+#else
+  DMA2D->CR |= DMA2D_CR_START;
+#endif
+}
+
 /*
  * Flush the content of the internal buffer the specific area on the display.
  */
@@ -95,14 +113,13 @@ static void ex_disp_flush(lv_disp_drv_t *drv, const lv_area_t *area, lv_color_t 
     return;
   }
 
-  lv_draw_stm32_dma2d_buffer_copy(NULL,
-        (lv_color_t *) lvgl_fb + area->y1 * LV_HOR_RES + area->x1,
+  dma2d_buffer_copy((lv_color_t *) lvgl_fb + area->y1 * LV_HOR_RES + area->x1,
         (lv_coord_t) LV_HOR_RES, area, color_p, area->x2 - area->x1 + 1, area);
 #ifndef USE_WAIT_CB
   lv_disp_flush_ready(drv);
-#endif
 #ifdef DISP_FLUSH_Pin
   HAL_GPIO_WritePin(DISP_FLUSH_Port, DISP_FLUSH_Pin, GPIO_PIN_RESET);
+#endif
 #endif
 }
 
@@ -153,6 +170,9 @@ static void dma2dCplt(DMA2D_HandleTypeDef *hdma2d)
 void drv_wait_cb(lv_disp_drv_t *drv)
 {
   osSemaphoreAcquire(dma2dsemId, osWaitForever);
+#ifdef DISP_FLUSH_Pin
+  HAL_GPIO_WritePin(DISP_FLUSH_Port, DISP_FLUSH_Pin, GPIO_PIN_RESET);
+#endif
   lv_disp_flush_ready(drv);
 }
 
@@ -162,9 +182,6 @@ void lvtask_initialize(LTDC_HandleTypeDef *hltdc)
   lv_init();
 
   DMA2D_HANDLE.State = HAL_DMA2D_STATE_READY;
-#ifdef USE_WAIT_CB
-  __HAL_DMA2D_ENABLE_IT(&DMA2D_HANDLE, DMA2D_IT_TC);
-#endif
 
   dma2dsemId = osSemaphoreNew(1, 1, &attributes_dma2dsem);
   HAL_DMA2D_RegisterCallback(&DMA2D_HANDLE, HAL_DMA2D_TRANSFERCOMPLETE_CB_ID, dma2dCplt);
@@ -256,7 +273,6 @@ const GUI_EVENT touch_event = {
 
 static void event_cb(lv_event_t *e)
 {
-debug_printf("event_cb called,\n");
   postGuiEvent(&reboot_event);
 }
 
@@ -433,8 +449,7 @@ static void gui_screenshot(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_
     /* At the begining of line, prepare JPEG encoder. */
     save_jpeg_start(fnum, "LVGL", LCD_WIDTH, LCD_HEIGHT);
   }
-  lv_draw_stm32_dma2d_buffer_copy(NULL,
-        (lv_color_t *) lvgl_fb + area->y1 * LV_HOR_RES + area->x1,
+  dma2d_buffer_copy((lv_color_t *) lvgl_fb + area->y1 * LV_HOR_RES + area->x1,
         (lv_coord_t) LV_HOR_RES, area, colorp, area->x2 - area->x1 + 1, area);
 
   /* When we reach to end of the screen line, frame buffer has completely filled. */
@@ -575,12 +590,13 @@ void StartLvglTask(void *argument)
   lv_obj_center(games->cheat_btn);
   lv_obj_add_event_cb(games->cheat_btn, game_event_cb, LV_EVENT_ALL, (void *)0);
 
-  /* Prepare virtual keyboard */
+  /* Prepare virtual keyboard. We'd like to draw the keyboard within DOOM screen area. */
 
   games->kbd = lv_keyboard_create(games->screen);
-  lv_obj_align(games->kbd, LV_ALIGN_BOTTOM_MID, 0, 0);
-  games->ta = lv_textarea_create(games->screen);
-  lv_obj_align(games->ta, LV_ALIGN_TOP_MID, 0, 60);
+  lv_obj_align(games->kbd, LV_ALIGN_BOTTOM_MID, 0, -(LCD_HEIGHT-DOOM_SCHEIGHT)/2);
+  lv_obj_set_width(games->kbd, DOOM_SCWIDTH);
+  games->ta = lv_textarea_create(games->screen);	// Text area
+  lv_obj_align(games->ta, LV_ALIGN_TOP_MID, 0, (LCD_HEIGHT-DOOM_SCHEIGHT)/2 + 60);
   lv_textarea_set_one_line(games->ta, true);
   lv_textarea_set_max_length(games->ta, 16);
   lv_obj_add_state(games->ta, LV_STATE_FOCUSED);

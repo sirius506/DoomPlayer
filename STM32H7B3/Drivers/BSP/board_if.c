@@ -93,8 +93,12 @@ static BSP_OSPI_NOR_Init_t Flash;
 SECTION_AHBSRAM uint32_t saved_palette[256];
 SECTION_FBRAM   uint8_t  saved_doom_screen[LCD_WIDTH*LCD_HEIGHT];
 SECTION_FBRAM   uint16_t RGB_Doom_Screen[LCD_WIDTH*LCD_HEIGHT];
+SECTION_FBRAM   uint16_t lvgl_alpha_screen[LCD_WIDTH*LCD_HEIGHT];
+
+extern uint16_t lvgl_fb[];
 
 static volatile uint8_t doom_dump_request;
+static int gui_alpha;
 
 void Board_SDRAM_Init()
 {
@@ -117,11 +121,13 @@ void Board_LCD_Init()
 void Board_GUI_LayerVisible(int alpha)
 {
   BSP_LCD_SetTransparency(0, 1, alpha);
+  gui_alpha = alpha;
 }
 
 void Board_GUI_LayerInvisible()
 {
   BSP_LCD_SetTransparency(0, 1, 0);
+  gui_alpha = 0;
 }
 
 void Board_DOOM_LayerInvisible()
@@ -215,9 +221,6 @@ void Board_Audio_Output_Stop()
 
 void Board_DoomModeLCD()
 {
-#if 0
-  BSP_DoomModeLCD();
-#endif
   BSP_LCD_SetTransparency(0, 1, 0);
   BSP_LCD_SetLayerVisible(0, 0, ENABLE);		// Enable Layer 0 -- Doom screen
   board_lcd_mode = LCD_MODE_DOOM;
@@ -465,32 +468,86 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
   }
 }
 
+/**
+ * @brief Capture DOOM game screen
+ */
 uint8_t *Board_DoomCapture()
 {
   DMA2D_HandleTypeDef *hdma2d = &DMA2D_HANDLE;
   int i;
+  uint16_t *wp;
 
   while (DMA2D->CR & DMA2D_CR_START)
     ;
 
-  DMA2D->CR = 0;
-  for (i = 0; i < 256; i++)
-    DMA2D->FGCLUT[i] = saved_palette[i];
+  if (gui_alpha)	// LVGL layer is visible (i.e. Cheat button/kbd is shown
+  {
+    /* Convert lvgl_fb contents to ARGB1555 format */
+    SCB_CleanInvalidateDCache();
+    hdma2d->Instance->CR = 0;
+    hdma2d->Instance->FGOR = 0;
+    hdma2d->Instance->OOR = 0;
+    hdma2d->Instance->FGPFCCR = (gui_alpha << 24) | DMA2D_INPUT_RGB565;
+    hdma2d->Instance->FGMAR = (uint32_t)lvgl_fb;
+    hdma2d->Instance->OMAR = (uint32_t)lvgl_alpha_screen;
+    hdma2d->Instance->OPFCCR = DMA2D_OUTPUT_ARGB1555;
+    hdma2d->Instance->NLR = (LCD_WIDTH << DMA2D_NLR_PL_Pos) | (LCD_HEIGHT << DMA2D_NLR_NL_Pos);
+  
+    hdma2d->Instance->CR |= DMA2D_M2M_PFC | DMA2D_CR_START;
+    while (DMA2D->CR & DMA2D_CR_START)
+      ;
 
-  SCB_CleanInvalidateDCache();
-  /* Convert L8 format image to RGB565 format */
-  hdma2d->Instance->CR = 0;
-  hdma2d->Instance->FGOR = 0;
-  hdma2d->Instance->OOR = 0;
-  hdma2d->Instance->FGPFCCR = (255 << 8) | DMA2D_INPUT_L8;
-  hdma2d->Instance->FGMAR = (uint32_t)saved_doom_screen;
-  hdma2d->Instance->OMAR = (uint32_t)RGB_Doom_Screen;
-  hdma2d->Instance->OPFCCR = DMA2D_OUTPUT_RGB565;
-  hdma2d->Instance->NLR = (LCD_WIDTH << DMA2D_NLR_PL_Pos) | (LCD_HEIGHT << DMA2D_NLR_NL_Pos);
+    /* Make green pixels to transparent */
+    for (wp = lvgl_alpha_screen; wp < &lvgl_alpha_screen[LCD_WIDTH*LCD_HEIGHT]; wp++)
+    {
+      /* 1000 0011 1110 0000 */
+      if (*wp == 0x83E0)
+        *wp = 0x03E0;
+    }
+    SCB_CleanInvalidateDCache();
 
-  hdma2d->Instance->CR |= DMA2D_M2M_PFC | DMA2D_CR_START;
-  while (DMA2D->CR & DMA2D_CR_START)
-    ;
+    /* Load palette */
+    DMA2D->CR = 0;
+    for (i = 0; i < 256; i++)
+      DMA2D->BGCLUT[i] = saved_palette[i];
+
+    /* Blend Doom screen and lvgl screen */
+    hdma2d->Instance->CR = 0;
+    hdma2d->Instance->FGOR = 0;
+    hdma2d->Instance->BGOR = 0;
+    hdma2d->Instance->FGPFCCR = DMA2D_INPUT_ARGB1555;
+    hdma2d->Instance->FGMAR = (uint32_t)lvgl_alpha_screen;
+    hdma2d->Instance->BGPFCCR = (255 << 8) | DMA2D_INPUT_L8;
+    hdma2d->Instance->BGMAR = (uint32_t)saved_doom_screen;
+    hdma2d->Instance->OMAR = (uint32_t)RGB_Doom_Screen;
+    hdma2d->Instance->OPFCCR = DMA2D_OUTPUT_RGB565;
+    hdma2d->Instance->NLR = (LCD_WIDTH << DMA2D_NLR_PL_Pos) | (LCD_HEIGHT << DMA2D_NLR_NL_Pos);
+  
+    hdma2d->Instance->CR |= DMA2D_M2M_BLEND | DMA2D_CR_START;
+    while (DMA2D->CR & DMA2D_CR_START)
+      ;
+  }
+  else
+  {
+    DMA2D->CR = 0;
+    for (i = 0; i < 256; i++)
+      DMA2D->FGCLUT[i] = saved_palette[i];
+  
+    SCB_CleanInvalidateDCache();
+    /* Convert L8 format image to RGB565 format */
+    hdma2d->Instance->CR = 0;
+    hdma2d->Instance->FGOR = 0;
+    hdma2d->Instance->OOR = 0;
+    hdma2d->Instance->FGPFCCR = (255 << 8) | DMA2D_INPUT_L8;
+    hdma2d->Instance->FGMAR = (uint32_t)saved_doom_screen;
+    hdma2d->Instance->OMAR = (uint32_t)RGB_Doom_Screen;
+    hdma2d->Instance->OPFCCR = DMA2D_OUTPUT_RGB565;
+    hdma2d->Instance->NLR = (LCD_WIDTH << DMA2D_NLR_PL_Pos) | (LCD_HEIGHT << DMA2D_NLR_NL_Pos);
+  
+    hdma2d->Instance->CR |= DMA2D_M2M_PFC | DMA2D_CR_START;
+    while (DMA2D->CR & DMA2D_CR_START)
+      ;
+  }
   SCB_CleanInvalidateDCache();
   return (uint8_t *)RGB_Doom_Screen;
 }

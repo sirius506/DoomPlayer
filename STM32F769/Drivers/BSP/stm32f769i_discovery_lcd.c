@@ -88,7 +88,7 @@ EndDependencies */
 #endif
 
 SECTION_FBRAM uint8_t doom_fb[640*400*2];
-SECTION_FBRAM uint8_t lvgl_fb[800*480*2];
+SECTION_FBRAM uint16_t lvgl_fb[800*480];
 
 static uint32_t fbqBuffer[2];
 

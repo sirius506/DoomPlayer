@@ -94,7 +94,7 @@
 #include <string.h>
 #include "board_if.h"
 
-SECTION_AXISRAM uint8_t lvgl_fb[480*272*2];
+SECTION_AXISRAM uint16_t lvgl_fb[480*272];
 SECTION_FBRAM uint8_t doom_fb[480*272*2];
 
 static uint32_t fbqBuffer[2];
@@ -102,8 +102,6 @@ static uint32_t fbqBuffer[2];
 MESSAGEQ_DEF(fbq, fbqBuffer, sizeof(fbqBuffer))
 
 static osMessageQueueId_t fbqId;
-
-#define USE_HAL_LTDC_REGISTER_CALLBACKS 0
 
 /** @addtogroup BSP
   * @{
@@ -275,18 +273,7 @@ int32_t BSP_LCD_InitEx(uint32_t Instance, uint32_t Orientation, uint32_t PixelFo
     hlcd_dma2d.Instance = DMA2D;
 
     /* MSP initialization */
-#if (USE_HAL_LTDC_REGISTER_CALLBACKS == 1)
-    /* Register the LTDC MSP Callbacks */
-    if(Lcd_Ctx[Instance].IsMspCallbacksValid == 0U)
-    {
-      if(BSP_LCD_RegisterDefaultMspCallbacks(0) != BSP_ERROR_NONE)
-      {
-        return BSP_ERROR_PERIPH_FAILURE;
-      }
-    }
-#else
     LTDC_MspInit(&hlcd_ltdc);
-#endif
     /* De-assert display enable LCD_DISP_EN pin */
     HAL_GPIO_WritePin(LCD_DISP_EN_GPIO_PORT, LCD_DISP_EN_PIN, GPIO_PIN_RESET);
 
@@ -398,9 +385,7 @@ int32_t BSP_LCD_DeInit(uint32_t Instance)
 
     /* Assert backlight LCD_BL_CTRL pin */
     HAL_GPIO_WritePin(LCD_BL_CTRL_GPIO_PORT, LCD_BL_CTRL_PIN, GPIO_PIN_RESET);
-#if (USE_HAL_LTDC_REGISTER_CALLBACKS == 0)
     LTDC_MspDeInit(&hlcd_ltdc);
-#endif /* (USE_HAL_LTDC_REGISTER_CALLBACKS == 0) */
 
     DMA2D_MspDeInit(&hlcd_dma2d);
 
@@ -535,75 +520,6 @@ __weak HAL_StatusTypeDef MX_LTDC_ClockConfig(LTDC_HandleTypeDef *hltdc)
 
   return HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct);
 }
-
-#if (USE_HAL_LTDC_REGISTER_CALLBACKS == 1)
-/**
-  * @brief Default BSP LCD Msp Callbacks
-  * @param Instance BSP LCD Instance
-  * @retval BSP status
-  */
-int32_t BSP_LCD_RegisterDefaultMspCallbacks (uint32_t Instance)
-{
-  int32_t ret = BSP_ERROR_NONE;
-
-  if(Instance >= LCD_INSTANCES_NBR)
-  {
-    ret = BSP_ERROR_WRONG_PARAM;
-  }
-  else
-  {
-    if(HAL_LTDC_RegisterCallback(&hlcd_ltdc, HAL_LTDC_MSPINIT_CB_ID, LTDC_MspInit) != HAL_OK)
-    {
-      ret = BSP_ERROR_PERIPH_FAILURE;
-    }
-    else
-    {
-      if(HAL_LTDC_RegisterCallback(&hlcd_ltdc, HAL_LTDC_MSPDEINIT_CB_ID, LTDC_MspDeInit) != HAL_OK)
-      {
-        ret = BSP_ERROR_PERIPH_FAILURE;
-      }
-    }
-
-    Lcd_Ctx[Instance].IsMspCallbacksValid = 1;
-  }
-
-  return ret;
-}
-
-/**
-  * @brief BSP LCD Msp Callback registering
-  * @param Instance    LCD Instance
-  * @param CallBacks   pointer to LCD MspInit/MspDeInit functions
-  * @retval BSP status
-  */
-int32_t BSP_LCD_RegisterMspCallbacks (uint32_t Instance, BSP_LCD_Cb_t *CallBacks)
-{
-  int32_t ret = BSP_ERROR_NONE;
-
-  if(Instance >= LCD_INSTANCES_NBR)
-  {
-    ret = BSP_ERROR_WRONG_PARAM;
-  }
-  else
-  {
-    if(HAL_LTDC_RegisterCallback(&hlcd_ltdc, HAL_LTDC_MSPINIT_CB_ID, CallBacks->pMspLtdcInitCb) != HAL_OK)
-    {
-      ret = BSP_ERROR_PERIPH_FAILURE;
-    }
-    else
-    {
-      if(HAL_LTDC_RegisterCallback(&hlcd_ltdc, HAL_LTDC_MSPDEINIT_CB_ID, CallBacks->pMspLtdcDeInitCb) != HAL_OK)
-      {
-        ret = BSP_ERROR_PERIPH_FAILURE;
-      }
-    }
-
-    Lcd_Ctx[Instance].IsMspCallbacksValid = 1;
-  }
-
-  return ret;
-}
-#endif /*(USE_HAL_LTDC_REGISTER_CALLBACKS == 1) */
 
 /**
   * @brief  LTDC layer configuration.
