@@ -11,7 +11,8 @@ int __errno;
 
 TASK_DEF(lvgl,    2200, osPriorityBelowNormal2)
 TASK_DEF(consTask, 400, osPriorityNormal);
-TASK_DEF(shotTask, 400, osPriorityLow3);
+//TASK_DEF(shotTask, 400, osPriorityLow3);
+TASK_DEF(shotTask, 400, osPriorityNormal2);
 
 #define REQCMD_DEPTH     6
 static uint8_t reqcmdBuffer[REQCMD_DEPTH * sizeof(REQUEST_CMD)];
