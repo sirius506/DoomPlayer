@@ -1,17 +1,20 @@
 TARGET=STM32H7B3
 #TARGET=STM32F769
 
-all: build/DoomPlayer.elf
+all: build${TARGET}/DoomPlayer.elf
 
-build/DoomPlayer.elf:
-	if ! [ -e build ]; then \
-	  cmake -B build -DTARGET=${TARGET}; \
+build${TARGET}/DoomPlayer.elf:
+	if ! [ -e build${TARGET} ]; then \
+	  cmake -B build${TARGET} -DTARGET=${TARGET}; \
 	fi
-	(cd build; make DoomPlayer.elf)
+	(cd build${TARGET}; make DoomPlayer.elf)
 
-install: build/DoomPlayer.elf
-	-mkdir bin/${TARGET}
-	install build/DoomPlayer.elf bin/${TARGET}
+install: build${TARGET}/DoomPlayer.elf
+	-mkdir release
+	install build${TARGET}/DoomPlayer.elf release/DoomPlayer_${TARGET}.elf
 
 clean:	
-	rm -rf build
+	rm -rf build${TARGET}
+
+cleanelf:
+	rm build*/DoomPlayer.elf

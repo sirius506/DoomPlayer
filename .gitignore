@@ -53,7 +53,6 @@ iar*.a
 .tmp_versions/
 .DS_Store
 modules.order
-games/
 Module.symvers
 Mkfile.old
 dkms.conf
@@ -68,6 +67,7 @@ compile_commands.json
 CTestTestfile.cmake
 _deps
 build*
+release/
 */Drivers/CMSIS/DSP/DSP_Lib_TestSuite/
 */Drivers/CMSIS/DSP/Examples/
 */Drivers/CMSIS/Device/ST/*/Source/Templates/
