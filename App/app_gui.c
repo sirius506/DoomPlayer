@@ -10,7 +10,7 @@
 #include "usbh_hid.h"
 #include "jpeg_if.h"
 
-//#define USE_WAIT_CB
+#define USE_WAIT_CB
 
 extern int doom_main(int argc, char **argv);
 
