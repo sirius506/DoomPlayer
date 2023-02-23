@@ -277,6 +277,7 @@ uint8_t BSP_LCD_Init(void)
   uint32_t fbaddr;
   uint8_t val;
 
+  hdma2d_discovery.Instance = DMA2D;
   val = BSP_LCD_InitEx(LCD_ORIENTATION_LANDSCAPE);
   fbqId = osMessageQueueNew(2, sizeof(uint32_t), &attributes_fbq);
   fbaddr = (uint32_t) doom_fb;
