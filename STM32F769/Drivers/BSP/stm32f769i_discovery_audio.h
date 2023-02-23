@@ -114,7 +114,7 @@
 #define AUDIO_OUT_SAIx_DMAx_IRQHandler           DMA2_Stream1_IRQHandler
 
 /* Select the interrupt preemption priority and subpriority for the DMA interrupt */
-#define AUDIO_OUT_IRQ_PREPRIO                    ((uint32_t)0x0E) 
+#define AUDIO_OUT_IRQ_PREPRIO                    ((uint32_t)0x09) 
 
 /*------------------------------------------------------------------------------
                         AUDIO IN CONFIGURATION

@@ -65,7 +65,7 @@
 #define BSP_SDRAM_IT_PRIORITY               15U
 #define BSP_CAMERA_IT_PRIORITY              15U
 #define BSP_BUTTON_USER_IT_PRIORITY         15U
-#define BSP_AUDIO_OUT_IT_PRIORITY           14U
+#define BSP_AUDIO_OUT_IT_PRIORITY           9U
 #define BSP_AUDIO_IN_IT_PRIORITY            15U
 #define BSP_SD_IT_PRIORITY                  14U
 #define BSP_SD_RX_IT_PRIORITY               14U
