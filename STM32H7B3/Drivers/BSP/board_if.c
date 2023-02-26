@@ -114,7 +114,7 @@ void Board_LCD_Init()
   BSP_LCD_Init(0, LCD_ORIENTATION_LANDSCAPE);
   BSP_LCD_SetLayerVisible(0, 0, DISABLE);		// Disable DOOM layer
   BSP_LCD_SetLayerVisible(0, 1, ENABLE);		// Enable LVGL layer
-  BSP_LCD_SetBrightness(0, 70);
+  BSP_LCD_SetBrightness(0, 90);
   board_lcd_mode = LCD_MODE_LVGL;
 }
 
