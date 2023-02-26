@@ -25,13 +25,16 @@ Game part is based on [Chocolate-doom 3.0.1](https://www.chocolate-doom.org/).
 
 Please refer [Wiki pages](https://github.com/sirius506/DoomPlayer/wiki) for more descriptions and screen shot images.
 
-## Binary Installation
-* Write the DoomPlayer.elf image under the bin directory to the target Disovery board's MCU flash. You can use STM32Prog for the operation.
-* Prepare formated SD card and create '/GameData' directory. Copy all files under the GameData directory in this repo to the SD card. You also need to copy FLAC format music pack files and supported DOOM game WAD files. Read 'GameData/README.md' for details.
-
-## Starting up
+## Get started
+* Download target .elf and gamedata.zip files from latest [release](https://github.com/sirius506/DoomPlayer/releases).
+* Write the target .elf image to the target Disovery board's MCU flash. You can use STM32Prog for the operation.
+* Prepare formated SD card. Unzip gamedata.zip and copy GameData directory to the SD card. You also need to copy FLAC format music pack files and supported DOOM game WAD files. Read 'GameData/README.md' for details.
 * Insert prepared SD card into the target Discovery board.
 * Connect DualSense controller (if you have one) to the OTG USB port. 
 * Supply the power. It is recommended to avoid to use STLINK position on board power selection, since DualSense consumes the power and it may result as USB host port over current.
 * When system is initialized, DOOM games available on the flash and SD cards are listed on the LCD. Select green colored flash game to start the player, or choose one of SD card game to re-write the flash contents.
+* Check [wiki pages](https://github.com/sirius506/DoomPlayer/wiki) for more explanations and sample screen shots.
 
+## TODO
+* Support USB Mouse
+* Support USB HUB class
