@@ -32,6 +32,7 @@ typedef struct {
   lv_point_t cursor_point;
   lv_coord_t *chart_vars;
   int16_t  posdiv;		// Postion divisor
+  int16_t  ticks;
 } CHART_INFO;
 
 

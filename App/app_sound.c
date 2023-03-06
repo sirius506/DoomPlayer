@@ -73,6 +73,7 @@ void set_sound_chart(CHART_INFO *chartInfo, SOUND_DATA *sdp)
 
   lv_imgbtn_set_state(chartInfo->play_obj, LV_IMGBTN_STATE_RELEASED);
 
+  chartInfo->ticks = 0;
   lv_timer_reset(cursor_timer);
   lv_timer_pause(cursor_timer);
 
@@ -163,6 +164,7 @@ static void play_event_click_cb(lv_event_t * e)
     Mix_ResumeChannel(0);
     lv_timer_resume(cursor_timer);
   } else {
+    lv_timer_pause(cursor_timer);
     Mix_PauseChannel(0);
   }
 }
@@ -275,7 +277,7 @@ lv_obj_t *sound_list_create(lv_obj_t *parent, LUMP_HEADER *lh, int numlumps, uin
 
     lv_obj_add_flag(chartInfo->play_obj, LV_OBJ_FLAG_CHECKABLE);
     lv_obj_set_width(chartInfo->play_obj, img_lv_demo_music_btn_play.header.w);
-    lv_obj_add_event_cb(chartInfo->play_obj, play_event_click_cb, LV_EVENT_CLICKED, NULL);
+    lv_obj_add_event_cb(chartInfo->play_obj, play_event_click_cb, LV_EVENT_VALUE_CHANGED, NULL);
     lv_obj_add_flag(chartInfo->play_obj, LV_OBJ_FLAG_CLICKABLE);
 
     //lv_gridnav_add(chartInfo->play_obj, LV_GRIDNAV_CTRL_NONE);
@@ -291,15 +293,19 @@ static void cursor_update_callback(lv_timer_t *t)
 
   ppos = Mix_PlayPosition(0);
 
-  if (ppos == 0)
+
+  if ((ppos == 0) && (chartInfo->ticks > 0))
   {
     /* If playposition is zero, it meaans play has finished.
-     * Change button image.
+     * Stop timer and change button image.
      */
+    chartInfo->ticks = 0;
+    lv_timer_pause(t);
     lv_imgbtn_set_state(chartInfo->play_obj, LV_IMGBTN_STATE_RELEASED);
   }
   else
   {
+    chartInfo->ticks++;
     ppos /= sdpCurrent->factor;
     if (ppos > sdpCurrent->length)
       ppos = sdpCurrent->length - 1;
