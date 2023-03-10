@@ -20,8 +20,6 @@ SECTION_USBSRAM struct dualsense_input_report prev_report;
 SECTION_USBSRAM struct dualsense_output_report out_report;
 SECTION_USBSRAM struct dualsense_touch_point prev_points[2];
 
-SECTION_USBSRAM HID_DualSense_Info_TypeDef DualSenseInfo;
-
 #define	SAMPLE_PERIOD	(0.004f)
 #define	SAMPLE_RATE	(250)
 
@@ -534,6 +532,7 @@ void UpdateBarColor(USBH_ClassTypeDef *pclass, USBH_HandleTypeDef *phost, uint8_
 
 static uint32_t last_button;
 static int pad_timer;
+static int16_t xinc, yinc;
 
 /**
  * @brief Convert HID input report to LVGL kaycode
@@ -541,6 +540,7 @@ static int pad_timer;
 void Generate_LVGL_Keycode(struct dualsense_input_report *rp, uint8_t hat, uint32_t vbutton)
 {
   static lv_indev_data_t pad_data;
+  int ix, iy, ax, ay;
 
   if (vbutton != last_button)
   {
@@ -584,5 +584,27 @@ void Generate_LVGL_Keycode(struct dualsense_input_report *rp, uint8_t hat, uint3
       }
     }
   }
+  ix = rp->rx - 128;
+  iy = rp->ry - 128;
+  ax = (ix < 0)? -ix : ix;
+  ay = (iy < 0)? -iy : iy;
+  ax = (ax > 80) ? 1 : 0;
+  ay = (ay > 80) ? 1 : 0;
+
+  if (ax != 0)
+  {
+    if (ix < 0) ax = -1;
+    if (ax != xinc)
+      postGuiEventMessage((ax > 0)? GUIEV_XDIR_INC : GUIEV_XDIR_DEC, 0, NULL, NULL);
+  }
+  xinc = ax;
+
+  if (ay != 0)
+  {
+    if (iy < 0) ay = -1;
+    if (ay != yinc)
+      postGuiEventMessage((ay > 0)? GUIEV_YDIR_DEC : GUIEV_YDIR_INC, 0, NULL, NULL);
+  }
+  yinc = ay;
 }
 

@@ -78,6 +78,8 @@ static void dma2d_buffer_copy(void * dest_buf, lv_coord_t dest_stride, const lv_
   int32_t dest_w = lv_area_get_width(dest_area);
   int32_t dest_h = lv_area_get_height(dest_area);
 
+  SCB_CleanInvalidateDCache();
+
   DMA2D->CR = 0x0;
   DMA2D->FGPFCCR = CM_RGB565;
   DMA2D->FGMAR = (uint32_t)src_buf;
@@ -974,7 +976,7 @@ void StartLvglTask(void *argument)
           menus->player_ing = lv_group_create();
           lv_indev_set_group(keypad_dev, menus->player_ing);
           Start_SDLMixer(mix_mode|MIXER_FFT_ENABLE);
-          menus->play_scr = music_player_create(mix_mode, menus->player_ing, &style_menubtn);
+          menus->play_scr = music_player_create(mix_mode, menus->player_ing, &style_menubtn, keypad_dev);
           lv_obj_add_flag(menus->cont_audio, LV_OBJ_FLAG_HIDDEN);
         }
         else
@@ -1015,12 +1017,6 @@ void StartLvglTask(void *argument)
 
         if (menus->sub_scr)
           lv_obj_del(menus->sub_scr);
-#if 0
-        if (menus->play_scr)
-          lv_obj_del(menus->play_scr);
-        lv_obj_del(menus->screen);
-        lv_obj_del(sounds->screen);
-#endif
         doomtaskId = osThreadNew(StartDoomTask, &doom_argv, &attributes_doomTask);
         break;
       case GUIEV_FFT_UPDATE:
@@ -1106,6 +1102,15 @@ void StartLvglTask(void *argument)
         lvgl_capture();
         fnum++;
         fnum %= 1000;
+        break;
+      case GUIEV_XDIR_INC:
+      case GUIEV_XDIR_DEC:
+      case GUIEV_YDIR_INC:
+      case GUIEV_YDIR_DEC:
+        if (lv_scr_act() == sounds->screen)
+          sound_process_stick(event.evcode);
+        else if (lv_scr_act() == menus->play_scr)
+          music_process_stick(event.evcode);
         break;
       default:
         break;

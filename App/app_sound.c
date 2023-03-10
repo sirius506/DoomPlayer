@@ -243,6 +243,10 @@ lv_obj_t *sound_list_create(lv_obj_t *parent, LUMP_HEADER *lh, int numlumps, uin
     chartInfo->chart = lv_chart_create(parent);
     lv_obj_set_size(chartInfo->chart, lv_pct(58), lv_pct(40));
     lv_obj_align(chartInfo->chart, LV_ALIGN_TOP_LEFT, lv_pct(40), lv_pct(16));
+#ifdef USE_ARROW_KEYS
+    lv_obj_add_flag(chartInfo->chart, LV_OBJ_FLAG_SCROLL_WITH_ARROW);
+    lv_group_add_obj(ing, chartInfo->chart);
+#endif
 
     /* Do not display points on the data */
     lv_obj_set_style_size(chartInfo->chart, 0, LV_PART_INDICATOR);
@@ -458,4 +462,40 @@ static void app_pcm_set(SOUND_DATA *sdp)
   }
   free(stb);
   Mix_LoadChannel(0, &sound_chunk, 1);
+}
+
+void sound_process_stick(int evcode)
+{
+  CHART_INFO *cinfo = &ChartInfo;
+  int w, val;
+
+  val = lv_slider_get_value(cinfo->slider);
+
+  switch (evcode)
+  {
+  case GUIEV_XDIR_INC:
+    val = lv_obj_get_scroll_x(cinfo->chart);
+    w = lv_obj_get_width(cinfo->chart);
+    lv_obj_scroll_to_x(cinfo->chart, val + w / 2, LV_ANIM_OFF);
+    break;
+  case GUIEV_XDIR_DEC:
+    val = lv_obj_get_scroll_x(cinfo->chart);
+    w = lv_obj_get_width(cinfo->chart);
+    val -= w / 2;
+    if (val < 0) val = 0;
+    lv_obj_scroll_to_x(cinfo->chart, val, LV_ANIM_OFF);
+    break;
+  case GUIEV_YDIR_INC:
+    if (val < LV_IMG_ZOOM_NONE * 10)
+      val += LV_IMG_ZOOM_NONE;
+    lv_slider_set_value(cinfo->slider, val, LV_ANIM_OFF);
+    lv_chart_set_zoom_x(cinfo->chart, val);
+    break;
+  case GUIEV_YDIR_DEC:
+    if (val > LV_IMG_ZOOM_NONE)
+      val -= LV_IMG_ZOOM_NONE;
+    lv_slider_set_value(cinfo->slider, val, LV_ANIM_OFF);
+    lv_chart_set_zoom_x(cinfo->chart, val);
+    break;
+  }
 }

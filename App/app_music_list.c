@@ -43,15 +43,6 @@ static inline int IsMusicLump(char *mush)
 extern char *GetSubstituteMusicFile(void *data, size_t data_len);
 
 typedef struct {
-  char *path;
-  char *title;
-  char *artist;
-  char *album;
-  int  track;
-  uint32_t samples;
-} MUSIC_INFO;
-
-typedef struct {
   uint8_t btype;
   uint8_t lenb[3];
 } METABH;
@@ -206,13 +197,13 @@ static int track_comp(const void *a, const void *b)
 
 static int track_count;
 
-
 static const lv_font_t * font_small;
 static const lv_font_t * font_medium;
 static lv_style_t style_scrollbar;
 static lv_style_t style_btn;
 static lv_style_t style_btn_pr;
 static lv_style_t style_btn_chk;
+static lv_style_t style_btn_fcs;
 static lv_style_t style_btn_dis;
 static lv_style_t style_title;
 static lv_style_t style_artist;
@@ -256,6 +247,7 @@ static lv_obj_t *add_list_btn(lv_obj_t *parent, MUSIC_INFO *mi)
     lv_obj_add_style(btn, &style_btn, 0);
     lv_obj_add_style(btn, &style_btn_pr, LV_STATE_PRESSED);
     lv_obj_add_style(btn, &style_btn_chk, LV_STATE_CHECKED);
+    lv_obj_add_style(btn, &style_btn_fcs, LV_STATE_FOCUSED);
     lv_obj_add_style(btn, &style_btn_dis, LV_STATE_DISABLED);
     lv_obj_add_event_cb(btn, btn_click_event_cb, LV_EVENT_CLICKED, NULL);
 
@@ -298,8 +290,11 @@ lv_obj_t *music_list_create(lv_obj_t *parent, uint32_t dhpos, LUMP_HEADER *lh, i
   char *fname;
   MUSIC_INFO *mi;
   lv_obj_t *list;
+  lv_group_t *g;
 
+  g = lv_group_create();
   MusicInfo = malloc(MAX_MUSIC * sizeof(MUSIC_INFO));
+
   memset(MusicInfo, 0, sizeof(MUSIC_INFO) * MAX_MUSIC);
   mi = MusicInfo;
   for (mindex = 0; mindex < MAX_MUSIC; mindex++)
@@ -368,6 +363,10 @@ lv_obj_t *music_list_create(lv_obj_t *parent, uint32_t dhpos, LUMP_HEADER *lh, i
     lv_style_set_bg_opa(&style_btn_chk, LV_OPA_COVER);
     lv_style_set_bg_color(&style_btn_chk, lv_color_hex(0x4c4965));
 
+    lv_style_init(&style_btn_fcs);
+    lv_style_set_bg_opa(&style_btn_fcs, LV_OPA_COVER);
+    lv_style_set_bg_color(&style_btn_fcs, lv_color_hex(0x4c4965));
+
     lv_style_init(&style_btn_dis);
     lv_style_set_text_opa(&style_btn_dis, LV_OPA_40);
     lv_style_set_img_opa(&style_btn_dis, LV_OPA_40);
@@ -392,12 +391,9 @@ lv_obj_t *music_list_create(lv_obj_t *parent, uint32_t dhpos, LUMP_HEADER *lh, i
     lv_obj_add_style(list, &style_scrollbar, LV_PART_SCROLLBAR);
     lv_obj_set_flex_flow(list, LV_FLEX_FLOW_COLUMN);
 
-#if 0
-    uint32_t track_id;
-    for(track_id = 0; _lv_demo_music_get_title(track_id); track_id++) {
-        add_list_btn(list,  track_id);
-    }
-#else
+    lv_gridnav_add(list, LV_GRIDNAV_CTRL_ROLLOVER);
+    lv_group_add_obj(g, list);
+
   track_count = 0;
 
   for (mi = MusicInfo; mi->title; mi++)
@@ -412,16 +408,53 @@ lv_obj_t *music_list_create(lv_obj_t *parent, uint32_t dhpos, LUMP_HEADER *lh, i
 #endif
 
     _lv_demo_music_list_btn_check(list, 0, true);
-#endif
+
+    MusicInfo->list_group = g;
 
     return list;
 }
 
+void music_process_stick(int evcode)
+{
+  switch (evcode)
+  {
+  case GUIEV_YDIR_INC:
+    lv_obj_scroll_to_y(MusicInfo->main_cont, LV_VER_RES + LV_DEMO_MUSIC_HANDLE_SIZE, LV_ANIM_ON);
+    break;
+  case GUIEV_YDIR_DEC:
+    lv_obj_scroll_to_y(MusicInfo->main_cont, 0, LV_ANIM_ON);
+    break;
+  }
+}
+
+/**
+ * When player container scroll has finished, this callback is called.
+ */
+static void scroll_cb(lv_event_t *event)
+{
+  MUSIC_INFO *mi;
+  int yoff;
+
+  mi = lv_event_get_user_data(event);
+
+  yoff = lv_obj_get_scroll_y(mi->main_cont);
+  if (yoff == 0)
+  {
+    /* Player screen has been restored. Switch back to main input group. */
+    lv_indev_set_group(mi->kdev, mi->main_group);
+  }
+  else if (yoff >= (LCD_HEIGHT - (LV_DEMO_MUSIC_HANDLE_SIZE * 1)))
+  {
+    /*
+     * Music list screen has been opened. Switch input group to the list.
+     */
+    lv_indev_set_group(mi->kdev, mi->list_group);
+  }
+}
 
 static lv_obj_t *list;
-static lv_obj_t *ctrl;
 
-lv_obj_t *music_player_create(int dev_flag, lv_group_t *g, lv_style_t *btn_style)
+lv_obj_t *music_player_create(int dev_flag, lv_group_t *g, lv_style_t *btn_style, lv_indev_t *keypad_dev)
 {
   QSPI_DIRHEADER *dirInfo = (QSPI_DIRHEADER *)QSPI_ADDR;
   FS_DIRENT *dirent;
@@ -445,7 +478,11 @@ debug_printf("freq = %d\n", play_frequency);
   scr = lv_obj_create(NULL);
   lv_scr_load(scr);
   list = music_list_create(scr, (uint32_t)dh, lh, dh->numlumps);
-  ctrl =  _lv_demo_music_main_create(scr, g, btn_style);
+  MusicInfo->main_cont =  _lv_demo_music_main_create(scr, g, btn_style);
+  MusicInfo->main_group = g;
+  MusicInfo->kdev = keypad_dev;
+
+  lv_obj_add_event_cb(MusicInfo->main_cont, scroll_cb, LV_EVENT_SCROLL_END, MusicInfo);
 
   return scr;
 }

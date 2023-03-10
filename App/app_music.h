@@ -12,6 +12,19 @@ typedef struct sCover {
   struct sCover *next;
 } COVER_INFO;
 
+typedef struct {
+  char *path;
+  char *title;
+  char *artist;
+  char *album;
+  int  track;
+  uint32_t samples;
+  lv_group_t *main_group;	// Input group when player screen is active
+  lv_group_t *list_group;	// Input group when music list is active
+  lv_indev_t *kdev;
+  lv_obj_t *main_cont;
+} MUSIC_INFO;
+
 #define LV_DEMO_MUSIC_LANDSCAPE 1
 #if LV_DEMO_MUSIC_LARGE
 #  define LV_DEMO_MUSIC_HANDLE_SIZE  40
@@ -32,4 +45,6 @@ uint32_t _lv_demo_music_get_track_length(uint32_t track_id);
 extern void register_cover_file(FS_DIRENT *dirent);
 extern COVER_INFO *track_cover(int track);
 extern uint32_t find_flash_file(char *name, int *psize);
+
+extern MUSIC_INFO *MusicInfo;
 #endif

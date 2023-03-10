@@ -57,6 +57,10 @@ typedef enum {
   GUIEV_DUALTEST_START,
   GUIEV_DUALTEST_UPDATE,
   GUIEV_DUALTEST_DONE,
+  GUIEV_XDIR_INC,
+  GUIEV_XDIR_DEC,
+  GUIEV_YDIR_INC,
+  GUIEV_YDIR_DEC,
   GUIEV_KBD_OK,
   GUIEV_KBD_CANCEL,
   GUIEV_CHEAT_SEL,
@@ -109,7 +113,7 @@ extern void CopyFlash(WADLIST *list, uint32_t foffset);
 
 extern lv_obj_t *dualtest_create();
 extern void dualtest_update();
-extern lv_obj_t *music_player_create(int dev_flag, lv_group_t *g, lv_style_t *btn_style);
+extern lv_obj_t *music_player_create(int dev_flag, lv_group_t *g, lv_style_t *btn_style, lv_indev_t *keypad_dev);
 extern lv_obj_t * _lv_demo_music_main_create(lv_obj_t * parent, lv_group_t *g, lv_style_t *btn_style);
 
 extern void _lv_demo_inter_pause_start();
@@ -128,6 +132,8 @@ extern void StartConsoleTask(void *argument);
 extern void StartUsb();
 extern void StartDoomTask(void *argument);
 extern void Start_SDLMixer(int mode);
+extern void music_process_stick(int evcode);
+extern void sound_process_stick(int evcode);
 
 extern KBDEVENT *kbd_get_event();
 #endif
