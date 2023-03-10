@@ -12,7 +12,6 @@ typedef enum {
 } HID_EV_FLAG;
 
 USBH_StatusTypeDef USBH_HID_DualSenseInit(USBH_ClassTypeDef *pclass, USBH_HandleTypeDef *phost);
-HID_DualSense_Info_TypeDef *USBH_HID_GetDualSenseInfo(USBH_ClassTypeDef *pclass, USBH_HandleTypeDef *phost);
 void USBH_HID_SetDualSenseLightbar(USBH_ClassTypeDef *pclass);
 void USBH_HID_DualSenseDecode(HID_HandleTypeDef *HID_Handle);
 

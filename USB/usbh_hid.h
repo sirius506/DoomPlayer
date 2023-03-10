@@ -101,7 +101,6 @@ HID_HandleTypeDef;
 #define	DEVTYPE_KEYBOARD	0
 #define	DEVTYPE_DUALSENSE	1
 
-
 #define USB_HID_GET_REPORT                            0x01U
 #define USB_HID_GET_IDLE                              0x02U
 #define USB_HID_GET_PROTOCOL                          0x03U

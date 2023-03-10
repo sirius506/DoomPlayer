@@ -53,7 +53,6 @@ static lv_obj_t * create_handle(lv_obj_t * parent);
 
 #if 0
 static void spectrum_anim_cb(void * a, int32_t v);
-static void spectrum_end_cb(lv_anim_t * a);
 #endif
 static void start_anim_cb(void * a, int32_t v);
 static void spectrum_draw_event_cb(lv_event_t * e);
@@ -511,11 +510,7 @@ static void create_wave_images(lv_obj_t * parent)
     lv_obj_t * wave_top = lv_img_create(parent);
     lv_img_set_src(wave_top, &img_lv_demo_music_wave_top);
     lv_obj_set_width(wave_top, LV_HOR_RES);
-#if 0
     lv_obj_align(wave_top, LV_ALIGN_TOP_MID, 0, 0);
-#else
-    lv_obj_align(wave_top, LV_ALIGN_TOP_MID, 0, LV_DEMO_MUSIC_HANDLE_SIZE);
-#endif
     lv_obj_add_flag(wave_top, LV_OBJ_FLAG_IGNORE_LAYOUT);
 
     lv_obj_t * wave_bottom = lv_img_create(parent);
@@ -1275,15 +1270,6 @@ void app_psec_update(int tv)
     if (slider_obj)
       lv_slider_set_value(slider_obj, tv, LV_ANIM_ON);
 }
-
-#if 0
-static void spectrum_end_cb(lv_anim_t * a)
-{
-    LV_UNUSED(a);
-    _lv_demo_music_album_next(true);
-}
-#endif
-
 
 static void stop_start_anim(lv_timer_t * t)
 {

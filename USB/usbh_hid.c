@@ -75,7 +75,7 @@ void StartHIDTask(void *arg)
   if (st == USBH_OK)
   {
      /* The descriptor is available in phost->device.Data */
-        HID_Handle->ctl_state = HID_REQ_SET_IDLE;
+     HID_Handle->ctl_state = HID_REQ_SET_IDLE;
      st = USBH_HID_SetIdle(pclass->phost, 0U, 0U);
 
      HID_Handle->Init(pclass, pclass->phost);
@@ -118,7 +118,6 @@ osDelay(4);
 
   sofc = 0;
 
-debug_printf("pclas = %x\n", pclass);
   while (1)
   {
     uint32_t evflag;

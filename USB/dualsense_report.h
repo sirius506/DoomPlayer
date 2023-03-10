@@ -24,17 +24,6 @@
 #define DS_TOUCHPAD_WIDTH	1920
 #define DS_TOUCHPAD_HEIGHT	1080
 
-typedef struct
-{
-  uint32_t vbuttons;
-  int16_t hatx;
-  int16_t haty;
-  int16_t joyx;
-  int16_t joyy;
-  int16_t rjoyx;
-  int16_t rjoyy;
-} HID_DualSense_Info_TypeDef;
-
 struct dualsense_touch_point {
   uint8_t contact;
   uint8_t x_lo;
