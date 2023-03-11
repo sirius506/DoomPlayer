@@ -56,8 +56,14 @@ typedef struct {
 } STREAM_INFO;
 
 static int play_frequency;
+static lv_obj_t *list;
 
 SECTION_DTCMRAM MUSIC_INFO *MusicInfo;
+
+lv_obj_t *getMusicList()
+{
+  return list;
+}
 
 static void collectInfo(MUSIC_INFO *mi)
 {
@@ -218,6 +224,7 @@ void _lv_demo_music_list_btn_check(lv_obj_t *list, uint32_t track_id, bool state
         lv_obj_add_state(btn, LV_STATE_CHECKED);
         lv_img_set_src(icon, &img_lv_demo_music_btn_list_pause);
         lv_obj_scroll_to_view(btn, LV_ANIM_ON);
+        lv_gridnav_set_focused(list, btn, LV_ANIM_OFF);
     }
     else {
         lv_obj_clear_state(btn, LV_STATE_CHECKED);
@@ -452,8 +459,6 @@ static void scroll_cb(lv_event_t *event)
   }
 }
 
-static lv_obj_t *list;
-
 lv_obj_t *music_player_create(int dev_flag, lv_group_t *g, lv_style_t *btn_style, lv_indev_t *keypad_dev)
 {
   QSPI_DIRHEADER *dirInfo = (QSPI_DIRHEADER *)QSPI_ADDR;
@@ -485,11 +490,6 @@ debug_printf("freq = %d\n", play_frequency);
   lv_obj_add_event_cb(MusicInfo->main_cont, scroll_cb, LV_EVENT_SCROLL_END, MusicInfo);
 
   return scr;
-}
-
-lv_obj_t *getMusicList()
-{
-  return list;
 }
 
 uint32_t _lv_demo_music_get_track_length(uint32_t track)
