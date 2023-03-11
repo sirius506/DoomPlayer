@@ -150,7 +150,7 @@ add_subdirectory(USB)
 add_subdirectory(Fusion)
 add_subdirectory(chocolate-doom)
 
-target_compile_options(lvgl PUBLIC -mcpu=cortex-m7 -mthumb -mfpu=fpv5-d16 -mfloat-abi=hard -O1 -Wall -fdata-sections -ffunction-sections -g -gdwarf-2
+target_compile_options(lvgl PUBLIC -mcpu=cortex-m7 -mthumb -mfpu=fpv5-d16 -mfloat-abi=hard -O2 -Wall -fdata-sections -ffunction-sections -g -gdwarf-2
 )
 
 target_include_directories(lvgl PUBLIC
