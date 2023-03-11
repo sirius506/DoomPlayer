@@ -80,8 +80,21 @@ void set_sound_chart(CHART_INFO *chartInfo, SOUND_DATA *sdp)
   lv_slider_set_value(chartInfo->slider, LV_IMG_ZOOM_NONE, LV_ANIM_OFF);
   lv_chart_set_zoom_x(chartInfo->chart, LV_IMG_ZOOM_NONE);
 
-  lv_chart_get_point_pos_by_id(chartInfo->chart, chartInfo->ser, 0, &chartInfo->cursor_point);
-  lv_chart_set_cursor_pos(chartInfo->chart, chartInfo->cursor, &chartInfo->cursor_point);
+  lv_chart_set_cursor_point(chartInfo->chart, chartInfo->cursor, chartInfo->ser, 0);
+}
+
+static void update_cursor(CHART_INFO *cinfo)
+{
+  uint32_t ppos;
+
+  /* Update cusor position */
+  ppos = Mix_PlayPosition(0);
+
+  ppos /= sdpCurrent->factor;
+  if (ppos > sdpCurrent->length)
+    ppos = sdpCurrent->length - 1;
+  ppos /= cinfo->posdiv;
+  lv_chart_set_cursor_point(cinfo->chart, cinfo->cursor, cinfo->ser, ppos);
 }
 
 void set_sound_title(lv_obj_t *title, SOUND_DATA *sdp)
@@ -145,6 +158,9 @@ static int sound_exist(SOUND_DATA *top,  char *name)
   return 0;
 }
 
+/**
+ * @brief Called when slider has moved.
+ */
 static void slider_x_event_cb(lv_event_t *e)
 {
   lv_obj_t *obj = lv_event_get_target(e);
@@ -159,6 +175,7 @@ static void slider_x_event_cb(lv_event_t *e)
 static void play_event_click_cb(lv_event_t * e)
 {
   lv_obj_t * obj = lv_event_get_target(e);
+  CHART_INFO *cinfo = lv_event_get_user_data(e);
 
   if(lv_obj_has_state(obj, LV_STATE_CHECKED)) {
     Mix_ResumeChannel(0);
@@ -166,6 +183,7 @@ static void play_event_click_cb(lv_event_t * e)
   } else {
     lv_timer_pause(cursor_timer);
     Mix_PauseChannel(0);
+    update_cursor(cinfo);
   }
 }
 
@@ -281,7 +299,7 @@ lv_obj_t *sound_list_create(lv_obj_t *parent, LUMP_HEADER *lh, int numlumps, uin
 
     lv_obj_add_flag(chartInfo->play_obj, LV_OBJ_FLAG_CHECKABLE);
     lv_obj_set_width(chartInfo->play_obj, img_lv_demo_music_btn_play.header.w);
-    lv_obj_add_event_cb(chartInfo->play_obj, play_event_click_cb, LV_EVENT_VALUE_CHANGED, NULL);
+    lv_obj_add_event_cb(chartInfo->play_obj, play_event_click_cb, LV_EVENT_VALUE_CHANGED, chartInfo);
     lv_obj_add_flag(chartInfo->play_obj, LV_OBJ_FLAG_CLICKABLE);
 
     //lv_gridnav_add(chartInfo->play_obj, LV_GRIDNAV_CTRL_NONE);
@@ -315,8 +333,7 @@ static void cursor_update_callback(lv_timer_t *t)
       ppos = sdpCurrent->length - 1;
   }
   /* Update cusor position */
-  lv_chart_get_point_pos_by_id(chartInfo->chart, chartInfo->ser, ppos / chartInfo->posdiv, &chartInfo->cursor_point);
-  lv_chart_set_cursor_pos(chartInfo->chart, chartInfo->cursor, &chartInfo->cursor_point);
+  lv_chart_set_cursor_point(chartInfo->chart, chartInfo->cursor, chartInfo->ser, ppos / chartInfo->posdiv);
 }
 
 static void sound_quit(lv_event_t *e)
@@ -486,14 +503,16 @@ void sound_process_stick(int evcode)
     lv_obj_scroll_to_x(cinfo->chart, val, LV_ANIM_OFF);
     break;
   case GUIEV_YDIR_INC:
-    if (val < LV_IMG_ZOOM_NONE * 10)
-      val += LV_IMG_ZOOM_NONE;
+    val += LV_IMG_ZOOM_NONE;
+    if (val > LV_IMG_ZOOM_NONE * 10)
+      val = LV_IMG_ZOOM_NONE * 10;
     lv_slider_set_value(cinfo->slider, val, LV_ANIM_OFF);
     lv_chart_set_zoom_x(cinfo->chart, val);
     break;
   case GUIEV_YDIR_DEC:
-    if (val > LV_IMG_ZOOM_NONE)
-      val -= LV_IMG_ZOOM_NONE;
+    val -= LV_IMG_ZOOM_NONE;
+    if (val < LV_IMG_ZOOM_NONE)
+      val = LV_IMG_ZOOM_NONE;
     lv_slider_set_value(cinfo->slider, val, LV_ANIM_OFF);
     lv_chart_set_zoom_x(cinfo->chart, val);
     break;
