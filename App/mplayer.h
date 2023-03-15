@@ -5,7 +5,7 @@
 #include "SDL.h"
 #include "SDL_mixer.h"
 
-#define	EVF_PLAY	(1<<8)
+#define	EVF_START	(1<<8)
 #define	EVF_STOP	(1<<9)
 #define	EVF_SOF		(1<<10)
 #define	EVF_VOLUME	(1<<11)

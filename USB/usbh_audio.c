@@ -193,6 +193,7 @@ void StartAUDIOTask(void *arg)
   uint16_t ResolutionCtl;
   uint8_t *buff;
   volatile int done_flag = 0;
+  uint32_t evflag;
 
   SEGGER_RTT_printf(0, "AUDIO task started\n");
 
@@ -319,6 +320,16 @@ debug_printf("hp pipe = %d, pipeflags = %x\n", AUDIO_Handle->headphone.Pipe & 0x
   debug_printf("newvol = %d (%d)\n", VolumeCtl, st);
 #endif
 
+  /* Wait until user select USB as audio output */
+
+  UngrabUrb(phost);
+  do
+  {
+    evflag = osEventFlagsWait (audioEventFlag, 0xffff, osFlagsWaitAny, osWaitForever);
+  }
+  while (!(evflag & EVF_START));
+  GrabUrb(phost);
+
   if (AUDIO_Handle->headphone.supported == 1U)
   {
     st = USBH_SetInterface(phost,
@@ -363,39 +374,30 @@ debug_printf("hp pipe = %d, pipeflags = %x\n", AUDIO_Handle->headphone.Pipe & 0x
 
   msec_frames = offset_frames = 0;
 
-
-  while (1)
   {
-    uint32_t evflag;
-
-    evflag = osEventFlagsWait (audioEventFlag, 0xffff, osFlagsWaitAny, osWaitForever);
-
-    if (evflag & EVF_PLAY)
-    {
-#if 1
-debug_printf("Got PLAY\n");
-#endif
       GrabUrb(phost);
       USBH_AUDIO_SetFrequency(pclass, 48000, 4,  16);
       msec_frames = AUDIO_Handle->headphone.frame_length;
 debug_printf("msec_frames = %d\n", msec_frames);
-      UngrabUrb(phost);
       AUDIO_Handle->play_state = AUDIO_PLAYBACK_PLAY;
       pclass->cState = 2;
+      UngrabUrb(phost);
 
       audio_get_ptr = audio_buffer_top;
       pclass->cState = 3;
       offset_frames = 0;
       done_flag = -1;
 
-#ifdef USE_URB_SEMx
-      osSemaphoreAcquire(phost->urb_sem, osWaitForever);
-#endif
       (void)USBH_IsocSendData(phost,
                                 audio_get_ptr,
                                 msec_frames,
                                 AUDIO_Handle->headphone.Pipe);
-    }
+  }
+
+  while (1)
+  {
+    evflag = osEventFlagsWait (audioEventFlag, 0xffff, osFlagsWaitAny, osWaitForever);
+
     if (evflag & EVF_VOLUME)
     {
       GrabUrb(phost);
@@ -459,7 +461,7 @@ void UsbAudio_Output_Start(uint8_t *bp, int len)
 {
   audio_buffer_top = bp;
   audio_buffer_size = len;
-  osEventFlagsSet(audioEventFlag, EVF_PLAY);
+  osEventFlagsSet(audioEventFlag, EVF_START);
 }
 
 void usbAudio_SetVolume(int vol)
