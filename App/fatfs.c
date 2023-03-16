@@ -57,7 +57,17 @@ void MX_FATFS_Init(void)
 DWORD get_fattime(void)
 {
   /* USER CODE BEGIN get_fattime */
-  return 0;
+  extern RTC_HandleTypeDef hrtc;
+  RTC_TimeTypeDef cTime;
+  RTC_DateTypeDef cDate;
+  DWORD val;
+
+  HAL_RTC_GetTime(&hrtc, &cTime, RTC_FORMAT_BIN);
+  HAL_RTC_GetDate(&hrtc, &cDate, RTC_FORMAT_BIN);
+
+  val = (cTime.Seconds /2) | (cTime.Minutes << 5) | (cTime.Hours << 11) |
+		(cDate.Date << 16) | (cDate.Month << 21) | ((cDate.Year + 20) << 25);
+  return val;
   /* USER CODE END get_fattime */
 }
 
