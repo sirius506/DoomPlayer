@@ -1745,15 +1745,15 @@ __weak void BSP_LCD_MspInit(void)
   __HAL_RCC_DSI_RELEASE_RESET();
 
   /** @brief NVIC configuration for LTDC interrupt that is now enabled */
-  HAL_NVIC_SetPriority(LTDC_IRQn, 6, 0);
+  HAL_NVIC_SetPriority(LTDC_IRQn, 8, 0);
   HAL_NVIC_EnableIRQ(LTDC_IRQn);
 
   /** @brief NVIC configuration for DMA2D interrupt that is now enabled */
-  HAL_NVIC_SetPriority(DMA2D_IRQn, 6, 0);
+  HAL_NVIC_SetPriority(DMA2D_IRQn, 10, 0);
   HAL_NVIC_EnableIRQ(DMA2D_IRQn);
 
   /** @brief NVIC configuration for DSI interrupt that is now enabled */
-  HAL_NVIC_SetPriority(DSI_IRQn, 6, 0);
+  HAL_NVIC_SetPriority(DSI_IRQn, 8, 0);
   HAL_NVIC_EnableIRQ(DSI_IRQn);
 }
 
