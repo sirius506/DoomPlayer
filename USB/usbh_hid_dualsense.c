@@ -46,10 +46,6 @@ SECTION_USBSRAM struct dualsense_touch_point prev_points[2];
 #define	VBMASK_RIGHT	(1<<17)
 #define	VBMASK_DOWN	(1<<18)
 
-extern void Generate_LVGL_Keycode(struct dualsense_input_report *rp, uint8_t hat, uint32_t vbutton);
-extern void Generate_DOOM_Keycode(struct dualsense_input_report *rp, uint8_t hat, uint32_t vbutton);
-extern void Display_DualSense_Info(struct dualsense_input_report *rp, uint8_t hat, uint32_t vbutton);
-
 extern int fft_getcolor(uint8_t *p);
 extern void GetPlayerHealthColor(uint8_t *cval);
 
