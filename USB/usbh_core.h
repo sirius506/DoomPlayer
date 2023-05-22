@@ -1,5 +1,5 @@
-#ifndef __USBH_CORE_H
-#define __USBH_CORE_H
+#ifndef _USBH_CORE_H
+#define _USBH_CORE_H
 
 #include "usbh_def.h"
 

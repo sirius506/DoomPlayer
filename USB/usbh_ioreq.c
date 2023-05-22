@@ -187,6 +187,7 @@ USBH_StatusTypeDef USBH_BulkSendData(USBH_HandleTypeDef *phost,
     do_ping = 0U;
   }
 
+  SCB_CleanDCache_by_Addr((uint32_t *)buff, length);
   osMutexAcquire(phost->host_lock, osWaitForever);
   (void)USBH_LL_SubmitURB(phost,                /* Driver handle    */
                           pipe_num,             /* Pipe index       */
@@ -215,6 +216,7 @@ USBH_StatusTypeDef USBH_BulkReceiveData(USBH_HandleTypeDef *phost,
                                         uint16_t length,
                                         uint8_t pipe_num)
 {
+  SCB_CleanInvalidateDCache_by_Addr((uint32_t *)buff, length);
   osMutexAcquire(phost->host_lock, osWaitForever);
   (void)USBH_LL_SubmitURB(phost,                /* Driver handle    */
                           pipe_num,             /* Pipe index       */

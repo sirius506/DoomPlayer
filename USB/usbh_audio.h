@@ -18,8 +18,8 @@
   */
 
 /* Define to prevent recursive  ----------------------------------------------*/
-#ifndef __USBH_AUDIO_H
-#define __USBH_AUDIO_H
+#ifndef _USBH_AUDIO_H
+#define _USBH_AUDIO_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -418,6 +418,8 @@ typedef struct _AUDIO_Process
   uint32_t                           mem [8];	/* Aligned at word boundary for DMA */
   uint8_t                            temp_feature;
   uint8_t                            temp_channels;
+  uint32_t                           sampleFreq;
+  uint16_t                           numChan;
 }
 AUDIO_HandleTypeDef;
 
@@ -560,7 +562,6 @@ void        USBH_AUDIO_FrequencySet(USBH_HandleTypeDef *phost);
 void        USBH_AUDIO_BufferEmptyCallback(USBH_HandleTypeDef *phost);
 
 
-void UsbAudio_Output_Start(uint8_t *bp, int len);
 void usbAudio_SetVolume(int vol);
 
 /**

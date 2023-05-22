@@ -18,8 +18,8 @@
   */
 
 /* Define to prevent recursive -----------------------------------------------*/
-#ifndef __USBH_HID_PARSER_H
-#define __USBH_HID_PARSER_H
+#ifndef _USBH_HID_PARSER_H
+#define _USBH_HID_PARSER_H
 
 #ifdef __cplusplus
 extern "C" {

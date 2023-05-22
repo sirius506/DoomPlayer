@@ -1,5 +1,5 @@
-#ifndef __USBH_HID_H
-#define __USBH_HID_H
+#ifndef _USBH_HID_H
+#define _USBH_HID_H
 
 #include "usbh_core.h"
 
@@ -69,10 +69,15 @@ typedef struct
   uint8_t  lock;
 } FIFO_TypeDef;
 
-
 #define	HID_MODE_LVGL	0
 #define	HID_MODE_TEST	1
 #define	HID_MODE_DOOM	2
+
+typedef struct {
+  uint8_t  *ptr;
+  uint16_t len;
+  uint8_t  hid_mode;
+} HID_REPORT;
 
 /* Structure for HID process */
 typedef struct _HID_Process
@@ -91,15 +96,16 @@ typedef struct _HID_Process
   uint16_t             poll;
   uint32_t             timer;
   uint8_t              DataReady;
-  uint8_t              hid_mode;
+  HID_REPORT           report;
   HID_DescTypeDef      HID_Desc;
   osMessageQueueId_t   kbdqId;
+  void                 *gData;
   USBH_StatusTypeDef(* Init)(USBH_ClassTypeDef *pclass, USBH_HandleTypeDef *phost);
 }
 HID_HandleTypeDef;
 
 #define	DEVTYPE_KEYBOARD	0
-#define	DEVTYPE_DUALSENSE	1
+#define	DEVTYPE_GAMEPAD		1
 
 #define USB_HID_GET_REPORT                            0x01U
 #define USB_HID_GET_IDLE                              0x02U
@@ -114,10 +120,6 @@ HID_HandleTypeDef;
 #define HID_MOUSE_BOOT_CODE                           0x02U
 
 USBH_StatusTypeDef USBH_HID_GetHIDReportDescriptor(USBH_HandleTypeDef *phost, uint16_t length);
-
-void HID_Set_DoomMode();
-void HID_Set_TestMode();
-void HID_Set_LVGLMode();
 
 void USBH_HID_FifoInit(FIFO_TypeDef *f, uint8_t *buf, uint16_t size);
 USBH_StatusTypeDef USBH_HID_GetReport(USBH_HandleTypeDef *phost, uint8_t reportType,

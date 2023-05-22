@@ -18,8 +18,8 @@
   */
 
 /* Define to prevent recursive  ----------------------------------------------*/
-#ifndef __USDH_HID_USAGE_H
-#define __USDH_HID_USAGE_H
+#ifndef _USDH_HID_USAGE_H
+#define _USDH_HID_USAGE_H
 
 #ifdef __cplusplus
 extern "C" {

@@ -17,8 +17,8 @@
   */
 
 /* Define to prevent recursive -----------------------------------------------*/
-#ifndef __USBH_HID_KEYBD_H
-#define __USBH_HID_KEYBD_H
+#ifndef _USBH_HID_KEYBD_H
+#define _USBH_HID_KEYBD_H
 
 #ifdef __cplusplus
 extern "C" {

@@ -1,6 +1,6 @@
 
-#ifndef __USBH_IOREQ_H
-#define __USBH_IOREQ_H
+#ifndef _USBH_IOREQ_H
+#define _USBH_IOREQ_H
 
 #include "usbh_conf.h"
 #include "usbh_core.h"
@@ -22,4 +22,10 @@ USBH_StatusTypeDef USBH_CtlReceiveData(USBH_HandleTypeDef *phost, uint8_t *buff,
                                        uint16_t length, uint8_t pipe_num);
 USBH_StatusTypeDef USBH_CtlSendData(USBH_HandleTypeDef *phost, uint8_t *buff,
                                     uint16_t length, uint8_t pipe_num, uint8_t do_ping);
+USBH_StatusTypeDef USBH_BulkReceiveData(USBH_HandleTypeDef *phost, uint8_t *buff,
+                                        uint16_t length, uint8_t pipe_num);
+USBH_StatusTypeDef USBH_BulkSendData(USBH_HandleTypeDef *phost, uint8_t *buff, uint16_t length,
+                                     uint8_t pipe_num, uint8_t do_ping);
+USBH_StatusTypeDef USBH_InterruptSendData(USBH_HandleTypeDef *phost, uint8_t *buff,
+                                          uint8_t length, uint8_t pipe_num);
 #endif

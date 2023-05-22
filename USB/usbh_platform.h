@@ -18,8 +18,8 @@
 /* USER CODE END Header */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef __USBH_PLATFORM_H__
-#define __USBH_PLATFORM_H__
+#ifndef _USBH_PLATFORM_H
+#define _USBH_PLATFORM_H
 
 #ifdef __cplusplus
  extern "C" {

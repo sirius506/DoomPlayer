@@ -1,4 +1,5 @@
 #include "DoomPlayer.h"
+#include "app_task.h"
 #include "usbh_core.h"
 #include "usbh_ioreq.h"
 #include "usbh_pipes.h"
@@ -21,8 +22,6 @@ void StartHostTask(void *arg)
   __IO USBH_StatusTypeDef status = USBH_FAIL;
   uint8_t idx = 0U;
   USBH_ClassTypeDef *pcif;
-
-  osDelay(800);
 
   phost->gState = HOST_IDLE;
 
@@ -60,6 +59,7 @@ void StartHostTask(void *arg)
           break;
         case HOST_DEV_WAIT_FOR_ATTACHMENT: /* Wait for Port Enabled */
 
+osDelay(400);
           if (phost->device.PortEnabled == 1U)
           {
             USBH_UsrLog("USB Device Reset Completed");
@@ -233,7 +233,7 @@ void StartHostTask(void *arg)
                 {
                   //phost->gState = HOST_CLASS_REQUEST;
                   phost->gState = HOST_CLASS;
-                  USBH_UsrLog("%s class started.", pcif->Name);
+                  USBH_UsrLog("%s class started. speed is %d", pcif->Name, phost->device.speed);
 
 #if 0
                   /* Inform user that a class has been activated */
@@ -269,9 +269,14 @@ debug_printf("no grab.\n");
           }
 #endif
           break;
+        case HOST_DEV_DISCONNECTED:
+          debug_printf("Disconnected!?\n");
+          postGuiEventMessage(GUIEV_ICON_CHANGE, ICON_CLEAR | ICON_USB, NULL, NULL);
+          break;
         case HOST_ABORT_STATE:
         default:  
           debug_printf("Abort STATE %d\n", phost->gState);
+          NVIC_SystemReset();
           break;
       }
     }
@@ -612,9 +617,6 @@ USBH_StatusTypeDef  USBH_Init(USBH_HandleTypeDef *phost, uint8_t id)
   /* Create USB Host Queue */
   phost->os_event = osMessageQueueNew(MSGQUEUE_OBJECTS, sizeof(uint32_t), NULL);
   phost->host_lock = osMutexNew(NULL);
-#ifdef USE_URB_SEM
-  phost->urb_sem = osSemaphoreNew(1, 1, NULL);
-#endif
   phost->control_sem = osSemaphoreNew(1, 1, NULL);
   phost->thread = osThreadNew(StartHostTask, phost, &attributes_hostTask);
 
@@ -912,6 +914,7 @@ USBH_StatusTypeDef  USBH_LL_Connect(USBH_HandleTypeDef *phost)
   */
 USBH_StatusTypeDef  USBH_LL_Disconnect(USBH_HandleTypeDef *phost)
 {
+debug_printf("%s\n", __FUNCTION__);
   /* update device connection states */
   phost->device.is_disconnected = 1U;
   phost->device.is_connected = 0U;

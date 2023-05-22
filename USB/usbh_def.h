@@ -1,5 +1,5 @@
-#ifndef  USBH_DEF_H
-#define  USBH_DEF_H
+#ifndef  _USBH_DEF_H
+#define  _USBH_DEF_H
 
 #include "usbh_conf.h"
 
@@ -393,8 +393,14 @@ typedef struct sUSBH_Class
   struct sUSBH_Class  *pNext;
   __IO uint8_t        cState;           /* Class driver state */
   struct _USBH_HandleTypeDef  *phost;
-  osEventFlagsId_t    classEventFlag;
+  osMessageQueueId_t  classEventQueue;
 } USBH_ClassTypeDef;
+
+typedef struct 
+{
+  uint8_t channel;
+  uint32_t state;
+} PIPE_EVENT;
 
 /* USB Host handle structure */
 typedef struct _USBH_HandleTypeDef
@@ -407,19 +413,16 @@ typedef struct _USBH_HandleTypeDef
   USBH_ClassTypeDef    *pClass[USBH_MAX_NUM_SUPPORTED_CLASS];           /* Registered class */
   USBH_ClassTypeDef    *pActiveClassList;                               /* Active class */
   uint32_t              ClassNumber;
-  uint32_t              Pipes[16];
-  osEventFlagsId_t	PipeFlags[16];
+  uint32_t              Pipes[USBH_MAX_NUM_ENDPOINTS];
+  osEventFlagsId_t	PipeFlags[USBH_MAX_NUM_ENDPOINTS];
+  osMessageQueueId_t    PipeEvq[USBH_MAX_NUM_ENDPOINTS];
   __IO uint32_t         Timer;
   uint32_t              Timeout;
   uint8_t               id;
   void                 *pData;
-  void (* pUser)(struct _USBH_HandleTypeDef *pHandle, uint8_t id);
 
   osMessageQueueId_t    os_event;
   osMutexId_t           host_lock;
-#ifdef USE_URB_SEM
-  osSemaphoreId_t       urb_sem;
-#endif
   osSemaphoreId_t       control_sem;
   osThreadId_t          urb_thread;
   osThreadId_t          thread;

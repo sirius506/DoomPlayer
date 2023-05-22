@@ -18,8 +18,8 @@
   */
 
 /* Define to prevent recursive  ----------------------------------------------*/
-#ifndef __USBH_PIPES_H
-#define __USBH_PIPES_H
+#ifndef _USBH_PIPES_H
+#define _USBH_PIPES_H
 
 #ifdef __cplusplus
 extern "C" {

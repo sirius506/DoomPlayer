@@ -18,8 +18,8 @@
   */
 
 /* Define to prevent recursive  ----------------------------------------------*/
-#ifndef __USBH_CTLREQ_H
-#define __USBH_CTLREQ_H
+#ifndef _USBH_CTLREQ_H
+#define _USBH_CTLREQ_H
 
 #ifdef __cplusplus
 extern "C" {

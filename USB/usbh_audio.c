@@ -36,11 +36,11 @@
 #include "board_if.h"
 
 #include "mplayer.h"
+#include "audio_output.h"
 
 extern uint8_t  USBH_FindInterfaceIndex(USBH_HandleTypeDef *phost, uint8_t interface_number, uint8_t alt_settings);
 extern uint8_t  USBH_FindInterface(USBH_HandleTypeDef *phost, uint8_t Class, uint8_t SubClass, uint8_t Protocol);
 extern USBH_StatusTypeDef USBH_IsocSendData(USBH_HandleTypeDef *phost, uint8_t *buff, uint32_t length, uint8_t pipe_num);
-extern USBH_StatusTypeDef USBH_InterruptReceiveData(USBH_HandleTypeDef *phost, uint8_t *buff, uint8_t length, uint8_t pipe_num);
 
 #define	FLAG_TIMEOUT	osWaitForever
 
@@ -72,6 +72,10 @@ extern USBH_StatusTypeDef USBH_InterruptReceiveData(USBH_HandleTypeDef *phost, u
 /** @defgroup USBH_AUDIO_CORE_Private_Defines
   * @{
   */
+#define EVMSGQ_DEPTH     8
+static uint8_t audioevmsgqBuffer[EVMSGQ_DEPTH * sizeof(PIPE_EVENT)];
+
+MESSAGEQ_DEF(audioevmsgq, audioevmsgqBuffer, sizeof(audioevmsgqBuffer))
 /**
   * @}
   */
@@ -93,7 +97,9 @@ static USBH_StatusTypeDef USBH_AUDIO_FindHIDControl(USBH_ClassTypeDef *pclass, U
 static USBH_StatusTypeDef USBH_AUDIO_ParseCSDescriptors(USBH_ClassTypeDef *pclass, USBH_HandleTypeDef *phost);
 
 static USBH_StatusTypeDef USBH_AUDIO_BuildHeadphonePath(USBH_ClassTypeDef *pclass, USBH_HandleTypeDef *phost);
+#ifdef USE_MIC
 static USBH_StatusTypeDef USBH_AUDIO_BuildMicrophonePath(USBH_ClassTypeDef *pclass, USBH_HandleTypeDef *phost);
+#endif
 
 static USBH_StatusTypeDef ParseCSDescriptors(AUDIO_ClassSpecificDescTypedef *class_desc,
                                              uint8_t ac_subclass,
@@ -150,7 +156,7 @@ SECTION_USBSRAM AUDIO_HandleTypeDef AudioHandleBuffer;
 
 #define AUDIO_STACK_SIZE  800
 
-TASK_DEF(audiotask, AUDIO_STACK_SIZE, osPriorityRealtime)
+TASK_DEF(audiotask, AUDIO_STACK_SIZE, osPriorityHigh2)
 
 #define PLAYER_STACK_SIZE  5500
 
@@ -175,10 +181,9 @@ AUDIO_PlayStateTypeDef get_audio_status(USBH_ClassTypeDef *pclass)
   return AUDIO_Handle->play_state;
 }
 
-static uint8_t *audio_buffer_top;
-static uint8_t *audio_get_ptr;
-static int audio_buffer_size;
-static osEventFlagsId_t    audioEventFlag;
+static osMessageQueueId_t  audioEventQueue;
+
+static AUDIO_OUTPUT_DRIVER *usbDriver;
 
 void StartAUDIOTask(void *arg)
 {
@@ -189,11 +194,12 @@ void StartAUDIOTask(void *arg)
   USBH_StatusTypeDef req_status = USBH_BUSY;
   int16_t VolumeCtl;
   int msec_frames;
+  int max_msec;
   int offset_frames;
   uint16_t ResolutionCtl;
   uint8_t *buff;
   volatile int done_flag = 0;
-  uint32_t evflag;
+  PIPE_EVENT pev;
 
   SEGGER_RTT_printf(0, "AUDIO task started\n");
 
@@ -244,13 +250,6 @@ void StartAUDIOTask(void *arg)
     AUDIO_Handle->req_state = AUDIO_REQ_CS_REQUESTS;
     AUDIO_Handle->cs_req_state = AUDIO_REQ_GET_VOLUME;
   }
-
-  //phost->PipeFlags[AUDIO_Handle->headphone.Pipe & 0x0F] = pclass->classEventFlag;
-  phost->PipeFlags[AUDIO_Handle->headphone.Pipe & 0x0F] = audioEventFlag;
-
-#if 0
-debug_printf("hp pipe = %d, pipeflags = %x\n", AUDIO_Handle->headphone.Pipe & 0x0f, audioEventFlag);
-#endif
 
   GrabUrb(phost);
   st = USBH_AC_GetCur(pclass,
@@ -320,16 +319,6 @@ debug_printf("hp pipe = %d, pipeflags = %x\n", AUDIO_Handle->headphone.Pipe & 0x
   debug_printf("newvol = %d (%d)\n", VolumeCtl, st);
 #endif
 
-  /* Wait until user select USB as audio output */
-
-  UngrabUrb(phost);
-  do
-  {
-    evflag = osEventFlagsWait (audioEventFlag, 0xffff, osFlagsWaitAny, osWaitForever);
-  }
-  while (!(evflag & EVF_START));
-  GrabUrb(phost);
-
   if (AUDIO_Handle->headphone.supported == 1U)
   {
     st = USBH_SetInterface(phost,
@@ -368,106 +357,129 @@ debug_printf("hp pipe = %d, pipeflags = %x\n", AUDIO_Handle->headphone.Pipe & 0x
     }
   }
 #endif
+
   UngrabUrb(phost);
 
   AUDIO_Handle->play_state = AUDIO_PLAYBACK_IDLE;
 
   msec_frames = offset_frames = 0;
 
+  /* Wait until user select USB as audio output */
+
+  UngrabUrb(phost);
+  do
+  {
+    osMessageQueueGet(pclass->classEventQueue, &pev, NULL, osWaitForever);
+  }
+  while (pev.state != EVF_START);
+
   {
       GrabUrb(phost);
-      USBH_AUDIO_SetFrequency(pclass, 48000, 4,  16);
+      USBH_AUDIO_SetFrequency(pclass, AUDIO_Handle->sampleFreq, AUDIO_Handle->numChan,  16);
       msec_frames = AUDIO_Handle->headphone.frame_length;
+      max_msec = NUM_FRAMES * 1000 / AUDIO_Handle->sampleFreq;
 debug_printf("msec_frames = %d\n", msec_frames);
+debug_printf("freq = %d --> %d\n", AUDIO_Handle->sampleFreq, max_msec);
       AUDIO_Handle->play_state = AUDIO_PLAYBACK_PLAY;
       pclass->cState = 2;
       UngrabUrb(phost);
 
-      audio_get_ptr = audio_buffer_top;
       pclass->cState = 3;
       offset_frames = 0;
       done_flag = -1;
-
-      (void)USBH_IsocSendData(phost,
-                                audio_get_ptr,
-                                msec_frames,
-                                AUDIO_Handle->headphone.Pipe);
   }
+
+  UngrabUrb(phost);
+
+  phost->PipeFlags[AUDIO_Handle->headphone.Pipe & 0x0F] = 0;
+
+  done_flag = 1;
 
   while (1)
   {
-    evflag = osEventFlagsWait (audioEventFlag, 0xffff, osFlagsWaitAny, osWaitForever);
+    osMessageQueueGet(pclass->classEventQueue, &pev, NULL, osWaitForever);
 
-    if (evflag & EVF_VOLUME)
+    switch (pev.state)
     {
+    case EVF_SOF:
+      if ((AUDIO_Handle->play_state == AUDIO_PLAYBACK_PLAY) && done_flag)
+      {
+
+        SCB_CleanDCache();
+        if (usbDriver->play_index >= max_msec)
+        {
+          usbDriver->play_index = 0;
+        }
+//debug_printf("play: %x, %d\n", usbDriver->playbuffer_ptr, usbDriver->play_index);
+        done_flag = 0;
+        (void)USBH_IsocSendData(phost,
+                    usbDriver->playbuffer_ptr,
+                    msec_frames,
+                    AUDIO_Handle->headphone.Pipe);
+
+      }
+      else
+      {
+// debug_printf("SOF: %d, %d\n", AUDIO_Handle->play_state, done_flag);
+      }
+      break;
+    case USBH_URB_DONE:
+      if (pev.channel == AUDIO_Handle->headphone.Pipe)
+      {
+        done_flag = 1;
+
+        usbDriver->play_index++;
+        usbDriver->playbuffer_ptr += msec_frames;
+        if (usbDriver->playbuffer_ptr >= usbDriver->sound_buffer + usbDriver->sound_buffer_size)
+        {
+          usbDriver->playbuffer_ptr = usbDriver->sound_buffer;
+          mix_request_data(1);
+        }
+        else if (usbDriver->playbuffer_ptr == usbDriver->sound_buffer + usbDriver->sound_buffer_size/2)
+        {
+          mix_request_data(0);
+        }
+      }
+      break;
+    case EVF_VOLUME:
       GrabUrb(phost);
-      VolumeCtl = AUDIO_Handle->headphone.attribute.volumeMax - ResolutionCtl * (100 - (evflag & 0xff));
-      AUDIO_Handle->mem[0] = VolumeCtl;
+      VolumeCtl = AUDIO_Handle->headphone.attribute.volumeMax - ResolutionCtl * (100 - (pev.channel & 0xff)); 
+      AUDIO_Handle->mem[0] = VolumeCtl; 
       st = USBH_AC_SetCur(pclass, UAC_FEATURE_UNIT, AUDIO_Handle->temp_feature,
                           VOLUME_CONTROL, 0, 2U);
       UngrabUrb(phost);
-    }
-    if (evflag & EVF_STOP)
-    {
+      break;
+    case EVF_STOP:
+      debug_printf("EVF_STOP\n");
       AUDIO_Handle->play_state = AUDIO_PLAYBACK_DRAIN;
-    }
-#if 1
-    if (evflag & EVF_URB_DONE)
-    {
-#ifdef USE_URB_SEM
-      osSemaphoreRelease(phost->urb_sem);
-#endif
-#ifdef AUDIO_REQ_Pin
-HAL_GPIO_WritePin(AUDIO_REQ_Port , AUDIO_REQ_Pin, GPIO_PIN_RESET);
-#endif
-      done_flag = 1;
-    }
-#endif
-    //if (evflag & EVF_SOF)
-#if 1
-    if ((AUDIO_Handle->play_state == AUDIO_PLAYBACK_PLAY) &&
-       (evflag & EVF_SOF) && done_flag)
-#else
-    if ((AUDIO_Handle->play_state == AUDIO_PLAYBACK_PLAY) &&
-       //(evflag & EVF_SOF))
-       done_flag)
-#endif
-    {
-#ifdef USE_URB_SEM
-      osSemaphoreAcquire(phost->urb_sem, osWaitForever);
-#endif
-#ifdef AUDIO_REQ_Pin
-HAL_GPIO_WritePin(AUDIO_REQ_Port , AUDIO_REQ_Pin, GPIO_PIN_SET);
-#endif
-      done_flag = 0;
-
-      audio_get_ptr += msec_frames;
-      if (audio_get_ptr >= audio_buffer_top + audio_buffer_size)
-        audio_get_ptr = audio_buffer_top;
-
-      (void)USBH_IsocSendData(phost,
-                    audio_get_ptr,
-                    msec_frames,
-                    AUDIO_Handle->headphone.Pipe);
-      if (audio_get_ptr == audio_buffer_top + audio_buffer_size / 2)
-        Board_AUDIO_OUT_HalfTransfer_CallBack();
-      else if (audio_get_ptr == audio_buffer_top)
-        Board_AUDIO_OUT_TransferComplete_CallBack();
+      break;
+    default:
+      debug_printf("state = %d\n", pev.state);
+      break;
     }
   }
 }
 
-void UsbAudio_Output_Start(uint8_t *bp, int len)
+void UsbAudio_Output_Start(AUDIO_CONF *audio_conf)
 {
-  audio_buffer_top = bp;
-  audio_buffer_size = len;
-  osEventFlagsSet(audioEventFlag, EVF_START);
+  PIPE_EVENT pev;
+
+  usbDriver = audio_conf->pDriver;
+
+  pev.channel = 0;
+  pev.state = EVF_START;
+  osMessageQueuePut(audioEventQueue, &pev, 0, 0);
 }
 
 void usbAudio_SetVolume(int vol)
 {
+  PIPE_EVENT pev;
+
   if (vol < 0 || vol > 100) vol = 75;
-  osEventFlagsSet(audioEventFlag, EVF_VOLUME | vol);
+
+  pev.channel = vol;
+  pev.state = EVF_VOLUME;
+  osMessageQueuePut(audioEventQueue, &pev, 0, 0);
 }
 
 /**
@@ -564,6 +576,26 @@ debug_printf("HP Poll = %d\n", AUDIO_Handle->headphone.Poll);
   /* 3rd Step:  Find and Parse Audio interfaces */
   (void)USBH_AUDIO_ParseCSDescriptors(pclass, phost);
 
+  if (AUDIO_Handle->class_desc.as_desc[AUDIO_Handle->headphone.asociated_as].FormatTypeDesc->bSamFreqType != 0U)
+  {
+    uint8_t num_supported_freq;
+    int nchan, SampleRate, index;
+
+    num_supported_freq = (AUDIO_Handle->class_desc.as_desc[AUDIO_Handle->headphone.asociated_as].FormatTypeDesc->bLength - 8U) / 3U;
+
+    nchan = AUDIO_Handle->class_desc.as_desc[AUDIO_Handle->headphone.asociated_as].FormatTypeDesc->bNrChannels;
+    for (index = 0U; index < num_supported_freq; index++)
+    {
+      SampleRate = LE24(
+                AUDIO_Handle->class_desc.as_desc[AUDIO_Handle->headphone.asociated_as].FormatTypeDesc->tSamFreq[index]);
+      debug_printf("%d: %d, %d\n", index, nchan, SampleRate);
+      if (index == 0)
+      {
+         AUDIO_Handle->sampleFreq = SampleRate;
+         AUDIO_Handle->numChan = nchan;
+      }
+    }
+  }
 
   /* 4th Step:  Open the Audio streaming pipes*/
   if (AUDIO_Handle->headphone.supported == 1U)
@@ -587,6 +619,7 @@ debug_printf("HP pipe = %d\n", AUDIO_Handle->headphone.Pipe);
     (void)USBH_LL_SetToggle(phost,  AUDIO_Handle->headphone.Pipe, 0U);
   }
 
+#ifdef USE_MIC_SUPPORT
   if (AUDIO_Handle->microphone.supported == 1U)
   {
     (void)USBH_AUDIO_BuildMicrophonePath(pclass, phost);
@@ -603,6 +636,7 @@ debug_printf("HP pipe = %d\n", AUDIO_Handle->headphone.Pipe);
 
     (void)USBH_LL_SetToggle(phost,  AUDIO_Handle->microphone.Pipe, 0U);
   }
+#endif
 
   if (AUDIO_Handle->control.supported == 1U)
   {
@@ -620,6 +654,7 @@ debug_printf("HP pipe = %d\n", AUDIO_Handle->headphone.Pipe);
     (void)USBH_LL_SetToggle(phost,  AUDIO_Handle->control.Pipe, 0U);
 
   }
+  debug_printf("Pipe: control = %d, headphone = %d\n", AUDIO_Handle->control.Pipe, AUDIO_Handle->headphone.Pipe);
 
   AUDIO_Handle->req_state = AUDIO_REQ_INIT;
   AUDIO_Handle->control_state = AUDIO_CONTROL_INIT;
@@ -627,7 +662,9 @@ debug_printf("HP pipe = %d\n", AUDIO_Handle->headphone.Pipe);
   pclass->cState = 1;
   pclass->phost = phost;
 
-  audioEventFlag = osEventFlagsNew (NULL);
+  audioEventQueue = pclass->classEventQueue = osMessageQueueNew(EVMSGQ_DEPTH, sizeof(PIPE_EVENT), &attributes_audioevmsgq);
+  pclass->phost->PipeEvq[AUDIO_Handle->control.Pipe & 0x0F] = pclass->classEventQueue;
+  pclass->phost->PipeEvq[AUDIO_Handle->headphone.Pipe & 0x0F] = pclass->classEventQueue;
 
   osThreadNew(StartAUDIOTask, pclass, &attributes_audiotask);
 
@@ -708,13 +745,17 @@ static USBH_StatusTypeDef USBH_AUDIO_Process(USBH_HandleTypeDef *phost)
   */
 static USBH_StatusTypeDef USBH_AUDIO_SOFProcess(USBH_ClassTypeDef *pclass, USBH_HandleTypeDef *phost)
 {
+    PIPE_EVENT pev;
+
     switch (pclass->cState)
     {
     case 2:
       pclass->cState++;
       break;
     case 3:
-      osEventFlagsSet(audioEventFlag, EVF_SOF);
+      pev.channel = 0;
+      pev.state = EVF_SOF;
+      osMessageQueuePut(pclass->classEventQueue, &pev, 0, 0);
       break;
     default:
       break;
@@ -1034,6 +1075,7 @@ static uint32_t USBH_AUDIO_FindLinkedUnit(USBH_ClassTypeDef *pclass, USBH_Handle
   return 0U;
 }
 
+#ifdef USE_MIC
 /**
   * @brief  Build full path for Microphone device
   * @param  phost: Host handle
@@ -1099,6 +1141,7 @@ static USBH_StatusTypeDef USBH_AUDIO_BuildMicrophonePath(USBH_ClassTypeDef *pcla
 
   return ret;
 }
+#endif
 
 /**
   * @brief  Build full path for Headphone device
@@ -1334,6 +1377,7 @@ static USBH_StatusTypeDef USBH_AC_GetCur(USBH_ClassTypeDef *pclass,
     osThreadFlagsWait (0xff, osFlagsWaitAny, FLAG_TIMEOUT);
     ret = USBH_CtlReq(phost, (uint8_t *)(void *)(AUDIO_Handle->mem), wLength);
   }
+  SCB_InvalidateDCache_by_Addr((void *)AUDIO_Handle->mem, length);
   return ret;
 }
 
@@ -1415,6 +1459,7 @@ static USBH_StatusTypeDef USBH_AC_GetMax(USBH_ClassTypeDef *pclass,
     osThreadFlagsWait (0xff, osFlagsWaitAny, FLAG_TIMEOUT);
     ret = USBH_CtlReq(phost, (uint8_t *)(void *)(AUDIO_Handle->mem), wLength);
   }
+  SCB_InvalidateDCache_by_Addr((void *)AUDIO_Handle->mem, length);
   return ret;
 
 }
@@ -1496,6 +1541,7 @@ static USBH_StatusTypeDef USBH_AC_GetRes(USBH_ClassTypeDef *pclass,
     osThreadFlagsWait (0xff, osFlagsWaitAny, FLAG_TIMEOUT);
     ret = USBH_CtlReq(phost, (uint8_t *)(void *)(AUDIO_Handle->mem), wLength);
   }
+  SCB_InvalidateDCache_by_Addr((void *)AUDIO_Handle->mem, length);
   return ret;
 
 }
@@ -1577,6 +1623,7 @@ static USBH_StatusTypeDef USBH_AC_GetMin(USBH_ClassTypeDef *pclass,
     osThreadFlagsWait (0xff, osFlagsWaitAny, FLAG_TIMEOUT);
     ret = USBH_CtlReq(phost, (uint8_t *)(void *)(AUDIO_Handle->mem), wLength);
   }
+  SCB_InvalidateDCache_by_Addr((void *)AUDIO_Handle->mem, length);
   return ret;
 
 }
@@ -1620,83 +1667,6 @@ static USBH_StatusTypeDef USBH_AUDIO_SetEndpointControls(USBH_HandleTypeDef *pho
   return ret;
 
 }
-
-#if 0
-/**
-  * @brief  Handle HID Control process
-  * @param  phost: Host handle
-  * @retval USBH Status
-  */
-static USBH_StatusTypeDef USBH_AUDIO_Control(USBH_HandleTypeDef *phost)
-{
-  USBH_StatusTypeDef status = USBH_BUSY ;
-  AUDIO_HandleTypeDef *AUDIO_Handle = (AUDIO_HandleTypeDef *) phost->pActiveClassList->pData;
-  uint16_t attribute  = 0U;
-
-  switch (AUDIO_Handle->control_state)
-  {
-    case AUDIO_CONTROL_INIT:
-      if ((phost->Timer & 1U) == 0U)
-      {
-        AUDIO_Handle->control.timer = phost->Timer;
-        (void)USBH_InterruptReceiveData(phost,
-                                        (uint8_t *)(void *)(AUDIO_Handle->mem),
-                                        (uint8_t)AUDIO_Handle->control.EpSize,
-                                        AUDIO_Handle->control.Pipe);
-
-        AUDIO_Handle->temp_feature  = AUDIO_Handle->headphone.asociated_feature;
-        AUDIO_Handle->temp_channels = AUDIO_Handle->headphone.asociated_channels;
-
-        AUDIO_Handle->control_state = AUDIO_CONTROL_CHANGE ;
-      }
-      break;
-
-    case AUDIO_CONTROL_CHANGE:
-      if (USBH_LL_GetURBState(phost, AUDIO_Handle->control.Pipe) == USBH_URB_DONE)
-      {
-        attribute = LE16(&AUDIO_Handle->mem[0]);
-        if (USBH_AUDIO_SetControlAttribute(phost, (uint8_t)attribute) == USBH_BUSY)
-        {
-          break;
-        }
-      }
-
-      if ((phost->Timer - AUDIO_Handle->control.timer) >= AUDIO_Handle->control.Poll)
-      {
-        AUDIO_Handle->control.timer = phost->Timer;
-
-        (void)USBH_InterruptReceiveData(phost,
-                                        (uint8_t *)(void *)(AUDIO_Handle->mem),
-                                        (uint8_t)AUDIO_Handle->control.EpSize,
-                                        AUDIO_Handle->control.Pipe);
-
-      }
-      break;
-
-    case AUDIO_CONTROL_VOLUME_UP:
-      if (USBH_AUDIO_SetControlAttribute(phost, 1U) == USBH_OK)
-      {
-        AUDIO_Handle->control_state = AUDIO_CONTROL_INIT;
-        status = USBH_OK;
-      }
-      break;
-
-    case AUDIO_CONTROL_VOLUME_DOWN:
-      if (USBH_AUDIO_SetControlAttribute(phost, 2U) == USBH_OK)
-      {
-        AUDIO_Handle->control_state = AUDIO_CONTROL_INIT;
-        status = USBH_OK;
-      }
-      break;
-
-    case AUDIO_CONTROL_IDLE:
-    default:
-      break;
-  }
-
-  return status;
-}
-#endif
 
 /**
   * @brief  USBH_AUDIO_SetFrequency

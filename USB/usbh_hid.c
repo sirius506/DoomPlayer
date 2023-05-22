@@ -1,12 +1,13 @@
 #include "DoomPlayer.h"
 #include "usbh_hid.h"
+#include "usbh_def.h"
 #include "usbh_hid_parser.h"
 #include "usbh_ctlreq.h"
 #include "usbh_ioreq.h"
 #include "usbh_pipes.h"
 #include "usbh_hid_keybd.h"
-#include "usbh_hid_dualsense.h"
 #include "app_task.h"
+#include "gamepad.h"
 
 //#define	FLAG_TIMEOUT	5
 #define	FLAG_TIMEOUT	osWaitForever
@@ -16,6 +17,11 @@
 static KBDEVENT kbdqBuffer[KBDQ_SIZE];
 MESSAGEQ_DEF(kbdq, kbdqBuffer, sizeof(kbdqBuffer))
 osMessageQueueId_t kbdqId;
+
+#define EVMSGQ_DEPTH     8
+static uint8_t hidevmsgqBuffer[EVMSGQ_DEPTH * sizeof(PIPE_EVENT)];
+
+MESSAGEQ_DEF(hidevmsgq, hidevmsgqBuffer, sizeof(hidevmsgqBuffer))
 
 static USBH_StatusTypeDef USBH_HID_InterfaceInit(USBH_ClassTypeDef *pclass, USBH_HandleTypeDef *phost);
 static USBH_StatusTypeDef USBH_HID_InterfaceDeInit(USBH_ClassTypeDef *pclass, USBH_HandleTypeDef *phost);
@@ -50,18 +56,24 @@ USBH_ClassTypeDef  HID_Class =
 
 static USBH_ClassTypeDef *pclass;
 
+void set_hid_class(USBH_ClassTypeDef *class)
+{
+  pclass = class;
+}
+
 void StartHIDTask(void *arg)
 {
   HID_HandleTypeDef *HID_Handle;
   USBH_StatusTypeDef st;
   uint8_t sofc;
+  struct sGamePadDriver *padDriver;
 
   debug_printf("HID task started\n");
   pclass  = (USBH_ClassTypeDef *)arg;
 
   HID_Handle = (HID_HandleTypeDef *) pclass->pData;
   HID_Handle->state = HID_INIT;
-  HID_Handle->hid_mode = HID_MODE_LVGL;
+  HID_Handle->report.hid_mode = HID_MODE_LVGL;
   USBH_HID_ParseHIDDesc(&HID_Handle->HID_Desc, pclass->phost->device.CfgDesc_Raw);
 
   HID_Handle->kbdqId = kbdqId = osMessageQueueNew(KBDQ_SIZE, sizeof(KBDEVENT), &attributes_kbdq);
@@ -93,6 +105,8 @@ void StartHIDTask(void *arg)
 debug_printf("HID poll = %d\n", HID_Handle->poll);
        HID_Handle->timer = HID_Handle->poll;
      }
+
+     postGuiEventMessage(GUIEV_ICON_CHANGE, ICON_SET | ICON_USB, NULL, NULL);
   }
   else if (st == USBH_NOT_SUPPORTED)
   {
@@ -101,13 +115,17 @@ debug_printf("HID poll = %d\n", HID_Handle->poll);
   }
 
 debug_printf("HID EP = %d, %d, Pipe = %d, %d\n", HID_Handle->InEp, HID_Handle->OutEp, HID_Handle->InPipe, HID_Handle->OutPipe);
-  pclass->phost->PipeFlags[HID_Handle->InPipe & 0x0F] = pclass->classEventFlag;
-  pclass->phost->PipeFlags[HID_Handle->OutPipe & 0x0F] = pclass->classEventFlag;
-debug_printf("HID evflag = %x\n", pclass->classEventFlag);
+  pclass->classEventQueue = osMessageQueueNew(EVMSGQ_DEPTH, sizeof(PIPE_EVENT), &attributes_hidevmsgq);
+//    pclass->phost->PipeEvq[0] = pclass->classEventQueue;
+    pclass->phost->PipeEvq[HID_Handle->InPipe & 0x0F] = pclass->classEventQueue;
+    pclass->phost->PipeEvq[HID_Handle->OutPipe & 0x0F] = pclass->classEventQueue;
 osDelay(4);
 
-  if (HID_Handle->devType == DEVTYPE_DUALSENSE)
-    DualSenseSetup(pclass);
+  padDriver = (struct sGamePadDriver *)HID_Handle->gData;
+  if (HID_Handle->devType == DEVTYPE_GAMEPAD)
+  {
+    (*padDriver->Setup)(pclass);
+  }
 
   UngrabUrb(pclass->phost);
 
@@ -120,76 +138,51 @@ osDelay(4);
 
   while (1)
   {
-    uint32_t evflag;
+    PIPE_EVENT pev;
     uint32_t XferSize;
+uint8_t *orp;
+int orp_len;
 
-    osEventFlagsClear(pclass->classEventFlag, HID_SOF_FLAG);
-
-    evflag = osEventFlagsWait (pclass->classEventFlag, 0xffff, osFlagsWaitAny, osWaitForever);
-
-    if (evflag & HID_SOF_FLAG)
+    osMessageQueueGet(pclass->classEventQueue, &pev, NULL, osWaitForever);
+    switch (pev.state)
     {
-#ifdef HID_REQ_Pin
-HAL_GPIO_WritePin(HID_REQ_Port ,HID_REQ_Pin, GPIO_PIN_SET);
-#endif
-      if (HID_Handle->devType == DEVTYPE_DUALSENSE)
+    case HID_SOF_FLAG:
+      if (HID_Handle->devType == DEVTYPE_GAMEPAD)
       {
-        UpdateBarColor(pclass, pclass->phost, sofc++);
-
-        evflag = osEventFlagsWait (pclass->classEventFlag, EVF_URB_DONE, osFlagsWaitAny, 100);
-        if (evflag & 0x80000000)
-        {
-          debug_printf("update: evflag = %x\n", evflag);
-          while (1) osDelay(100);
-        }
+        (*padDriver->GetOutputReport)(&orp, &orp_len, HID_Handle->report.hid_mode, sofc++);
+        USBH_InterruptSendData(pclass->phost, orp, orp_len, HID_Handle->OutPipe);
       }
-#ifdef HID_REQ_Pin
-HAL_GPIO_WritePin(HID_REQ_Port ,HID_REQ_Pin, GPIO_PIN_RESET);
-#endif
-      //osEventFlagsClear(pclass->classEventFlag, EVF_URB_MASK);
-#ifdef USE_URB_SEM
-  osSemaphoreAcquire(pclass->phost->urb_sem, osWaitForever);
-#endif
-#ifdef HID_REQ_Pin
-HAL_GPIO_WritePin(HID_REQ_Port ,HID_REQ_Pin, GPIO_PIN_SET);
-#endif
       (void)USBH_InterruptReceiveData(pclass->phost, HID_Handle->pData,
                                       (uint8_t)HID_Handle->length,
                                       HID_Handle->InPipe);
-      evflag = osEventFlagsWait (pclass->classEventFlag, EVF_URB_DONE, osFlagsWaitAny, 10);
-#ifdef USE_URB_SEM
-  osSemaphoreRelease(pclass->phost->urb_sem);
-#endif
-#ifdef HID_REQ_Pin
-HAL_GPIO_WritePin(HID_REQ_Port ,HID_REQ_Pin, GPIO_PIN_RESET);
-#endif
-      if (evflag & 0x80000000)
+      break;
+    case USBH_URB_DONE:
+      if (pev.channel == HID_Handle->InPipe)
       {
-        debug_printf("recv: evflag = %x\n", evflag);
-        while (1) osDelay(100);
-      }
-
-      XferSize = USBH_LL_GetLastXferSize(pclass->phost, HID_Handle->InPipe);
-      if (XferSize > 0)
-      {
-          if (HID_Handle->devType == DEVTYPE_DUALSENSE)
-            USBH_HID_DualSenseDecode(HID_Handle);
+        XferSize = USBH_LL_GetLastXferSize(pclass->phost, HID_Handle->InPipe);
+        if (XferSize > 0)
+        {
+          if (HID_Handle->devType == DEVTYPE_GAMEPAD)
+          {
+            HID_Handle->report.len = XferSize;
+            (*padDriver->DecodeInputReport)(&HID_Handle->report);
+          }
           else
             USBH_HID_KeybdDecode(HID_Handle);
+        }
       }
-    }
-    else if (evflag & HID_LVGL_BIT)
-    {
-      HID_Handle->hid_mode = HID_MODE_LVGL;
-    }
-    else if (evflag & HID_DOOM_BIT)
-    {
-      HID_Handle->hid_mode = HID_MODE_DOOM;
-    }
-    else if (evflag & HID_TEST_BIT)
-    {
-      DualSenseResetFusion();
-      HID_Handle->hid_mode = HID_MODE_TEST;
+      break;
+    case HID_LVGL_BIT:
+      HID_Handle->report.hid_mode = HID_MODE_LVGL;
+      break;
+    case HID_DOOM_BIT:
+      HID_Handle->report.hid_mode = HID_MODE_DOOM;
+      break;
+    case HID_TEST_BIT:
+      HID_Handle->report.hid_mode = HID_MODE_TEST;
+      break;
+    default:
+      break;
     }
   }
 }
@@ -226,7 +219,6 @@ static USBH_StatusTypeDef USBH_HID_InterfaceInit(USBH_ClassTypeDef *pclass, USBH
     return USBH_FAIL;
   }
 
-  //pclass->pData = (HID_HandleTypeDef *)USBH_malloc(sizeof(HID_HandleTypeDef));
   memset(&HidHandleBuffer, 0, sizeof(HidHandleBuffer));
   pclass->pData = &HidHandleBuffer;
   HID_Handle = (HID_HandleTypeDef *) pclass->pData;
@@ -255,16 +247,27 @@ static USBH_StatusTypeDef USBH_HID_InterfaceInit(USBH_ClassTypeDef *pclass, USBH
     HID_Handle->Init = USBH_HID_MouseInit;
   }
 #endif
-  else if (phost->device.DevDesc.idProduct == 0xCE6 && phost->device.DevDesc.idVendor == 0x54C)
-  {
-    USBH_UsrLog("DualSense Controller found! (%x)", phost->device.CfgDesc.Itf_Desc[interface].bInterfaceProtocol);
-    HID_Handle->Init = USBH_HID_DualSenseInit;
-    HID_Handle->devType = DEVTYPE_DUALSENSE;
-  }
   else
   {
-    USBH_UsrLog("Protocol not supported.");
-    return USBH_FAIL;
+    GAMEPAD_INFO *padInfo;
+    const struct sGamePadDriver *pd;
+
+    padInfo = IsSupportedGamePad(phost->device.DevDesc.idVendor, phost->device.DevDesc.idProduct);
+    if (padInfo)
+    {
+      padInfo->pclass = pclass;
+      pd = padInfo->padDriver;
+      HID_Handle->gData = (void *)pd;
+      HID_Handle->Init = pd->Init;
+      HID_Handle->devType = DEVTYPE_GAMEPAD;
+      postGuiEventMessage(GUIEV_GAMEPAD_READY, 0, padInfo, NULL);
+    }
+    else
+    {
+      HID_Handle->gData = NULL;
+      USBH_UsrLog("Protocol not supported.");
+      return USBH_FAIL;
+    }
   }
 
   HID_Handle->state     = HID_INIT;
@@ -313,7 +316,6 @@ static USBH_StatusTypeDef USBH_HID_InterfaceInit(USBH_ClassTypeDef *pclass, USBH
   }
   pclass->cState = 1;
   pclass->phost = phost;
-  pclass->classEventFlag = osEventFlagsNew (NULL);
   hidtaskId =osThreadNew(StartHIDTask, pclass, &attributes_hidtask);
 
   return USBH_OK;
@@ -373,6 +375,7 @@ static USBH_StatusTypeDef USBH_HID_Process(USBH_ClassTypeDef *pclass, USBH_Handl
 static USBH_StatusTypeDef USBH_HID_SOFProcess(USBH_ClassTypeDef *pclass, USBH_HandleTypeDef *phost)
 {
   HID_HandleTypeDef *HID_Handle;
+  PIPE_EVENT pev;
 
   switch (pclass->cState)
   {
@@ -388,7 +391,9 @@ static USBH_StatusTypeDef USBH_HID_SOFProcess(USBH_ClassTypeDef *pclass, USBH_Ha
     else
     {
       HID_Handle->timer = HID_Handle->poll;
-      osEventFlagsSet(pclass->classEventFlag, HID_SOF_FLAG);
+      pev.channel = 0;
+      pev.state = HID_SOF_FLAG;
+      osMessageQueuePut(pclass->classEventQueue, &pev, 0, 0);
     }
     break;
   default:
@@ -617,22 +622,4 @@ USBH_StatusTypeDef USBH_HID_GetReport(USBH_HandleTypeDef *phost,
   } while (status == USBH_BUSY);
 
   return status;
-}
-
-void HID_Set_DoomMode()
-{
-  if (pclass)
-   osEventFlagsSet(pclass->classEventFlag, HID_DOOM_BIT);
-}
-
-void HID_Set_TestMode()
-{
-  if (pclass)
-    osEventFlagsSet(pclass->classEventFlag, HID_TEST_BIT);
-}
-
-void HID_Set_LVGLMode()
-{
-  if (pclass)
-    osEventFlagsSet(pclass->classEventFlag, HID_LVGL_BIT);
 }
