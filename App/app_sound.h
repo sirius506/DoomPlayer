@@ -1,5 +1,5 @@
-#ifndef __APP_SOUND_H__
-#define __APP_SOUND_H__
+#ifndef _APP_SOUND_H
+#define _APP_SOUND_H
 #include "mplayer.h"
 
 #define	PCM_MAGIC	0x0003

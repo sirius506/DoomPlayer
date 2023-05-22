@@ -1,5 +1,5 @@
-#ifndef __DOOMFS_H__
-#define __DOOMFS_H__
+#ifndef _DOOMFS_H
+#define _DOOMFS_H
 #include "targetdev_conf.h"
 
 /*

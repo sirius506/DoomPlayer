@@ -1,5 +1,5 @@
-#ifndef __APP_MUSIC_H__
-#define __APP_MUSIC_H__
+#ifndef _APP_MUSIC_H
+#define _APP_MUSIC_H
 #include "doomfs.h"
 
 /* Cover file must be ARGB565 binary format and 128x128 pixels */

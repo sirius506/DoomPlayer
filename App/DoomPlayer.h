@@ -1,5 +1,5 @@
-#ifndef __DOOMPLAYER_H__
-#define __DOOMPLAYER_H__
+#ifndef _DOOMPLAYER_H
+#define _DOOMPLAYER_H
 #include <string.h>
 #include "main.h"
 #include "SEGGER_RTT.h"

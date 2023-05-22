@@ -1,5 +1,5 @@
-#ifndef __TARGET_DEV_H__
-#define __TARGET_DEV_H__
+#ifndef _TARGET_DEV_H
+#define _TARGET_DEV_H
 #include "lvgl.h"
 
 #define	LCD_MODE_LVGL	0

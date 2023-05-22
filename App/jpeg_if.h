@@ -1,5 +1,5 @@
-#ifndef __JPEG_IF_H__
-#define __JPEG_IF_H__
+#ifndef _JPEG_IF_H
+#define _JPEG_IF_H
 
 #include "lvgl.h"
 

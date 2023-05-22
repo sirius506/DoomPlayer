@@ -1,5 +1,5 @@
-#ifndef __APP_GUI_H__
-#define __APP_GUI_H__
+#ifndef _APP_GUI_H
+#define _APP_GUI_H
 
 #include "lvgl.h"
 
