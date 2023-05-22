@@ -65,6 +65,7 @@ typedef StaticTask_t osStaticThreadDef_t;
 
 /*----------   -----------*/
 #define USBH_MAX_NUM_ENDPOINTS      8U
+#define	USBH_MAX_PIPES_NBR	    8U
 
 /*----------   -----------*/
 #define USBH_MAX_NUM_INTERFACES      5U

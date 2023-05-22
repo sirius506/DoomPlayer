@@ -1,17 +1,22 @@
-#ifndef __MPLAYER_H__
-#define __MPLAYER_H__
+#ifndef _MPLAYER_H
+#define _MPLAYER_H
 
 #include "fatfs.h"
-#include "SDL.h"
-#include "SDL_mixer.h"
+#include "../SDL/SDL.h"
+#include "../SDL/SDL_mixer.h"
 
 #define	EVF_START	(1<<8)
 #define	EVF_STOP	(1<<9)
 #define	EVF_SOF		(1<<10)
 #define	EVF_VOLUME	(1<<11)
 
-#define	NUM_FRAMES	240	/* 5ms worth PCM samples (48 * 5 = 240) */
-#define	BUF_FRAMES	(NUM_FRAMES*4)
+//#define	BUF_MSEC	12	/* Hold 6ms worth PCM samples in one frame */
+//#define	NUM_FRAMES	576	/* 4ms worth PCM samples (48 * 12 = 576) */
+#define	BUF_MSEC	10	/* Hold 10ms worth PCM samples in one frame */
+#define	NUM_FRAMES	480	/* 10ms worth PCM samples (48 * 19 = 480) */
+#define	BUF_FACTOR	2
+#define	BUF_FACTOR_H	(BUF_FACTOR/2)
+#define	BUF_FRAMES	(NUM_FRAMES*BUF_FACTOR)
 
 #define	DECIMATION_FACTOR	3
 
@@ -50,5 +55,6 @@ typedef struct {
 #define	FL_PLAY		(1<<2)
 
 extern CHANINFO ChanInfo[NUM_CHANNELS];
+extern void mix_request_data(int full);
 
 #endif

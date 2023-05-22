@@ -1,7 +1,8 @@
-#ifndef __APP_TASK_H__
-#define __APP_TASK_H__
+#ifndef _APP_TASK_H
+#define _APP_TASK_H
 
 #include "lvgl.h"
+#include "audio_output.h"
 
 /* Main task request commands definitions */
 
@@ -32,13 +33,24 @@ typedef struct {
   int       val;
 } SCREENSHOT_CMD;
 
+#define	ICON_SET		0x80
+#define	ICON_CLEAR		0x00
+#define	ICON_USB		0x20
+#define	ICON_BLUETOOTH		0x10
+#define	ICON_BATTERY		0x08
+#define	ICON_BATTERY_MASK	0x07
+
 /* GUI task event definitions */
 
 typedef enum {
   GUIEV_TOUCH_INT = 1,
-  GUIEV_DUALSENSE_READY,	// DualSense controller has found
+  GUIEV_PAIRING_OPEN,		// Open paring mode message box
+  GUIEV_PAIRING_CLOSE,		// Close paring mode message box
+  GUIEV_GAMEPAD_READY,	        // Gamepad controller has found
+  GUIEV_USB_AUDIO_READY,	// USB Audio (DualSense) has found
   GUIEV_SD_REPORT,		// Report REQ_VERIFY_SD result
   GUIEV_FLASH_REPORT,		// Report REQ_VERIFY_FLASH result
+  GUIEV_ICON_CHANGE,		// Set/Change Icon label
   GUIEV_MPLAYER_START,		// Start Music Player
   GUIEV_SPLAYER_START,		// Start Sound Player
   GUIEV_MPLAYER_DONE,
@@ -113,7 +125,7 @@ extern void CopyFlash(WADLIST *list, uint32_t foffset);
 
 extern lv_obj_t *dualtest_create();
 extern void dualtest_update();
-extern lv_obj_t *music_player_create(int dev_flag, lv_group_t *g, lv_style_t *btn_style, lv_indev_t *keypad_dev);
+extern lv_obj_t *music_player_create(AUDIO_CONF *audio_conf, lv_group_t *g, lv_style_t *btn_style, lv_indev_t *keypad_dev);
 extern lv_obj_t * _lv_demo_music_main_create(lv_obj_t * parent, lv_group_t *g, lv_style_t *btn_style);
 
 extern void _lv_demo_inter_pause_start();
@@ -131,9 +143,13 @@ extern void StartShotTask(void *argument);
 extern void StartConsoleTask(void *argument);
 extern void StartUsb();
 extern void StartDoomTask(void *argument);
-extern void Start_SDLMixer(int mode);
+extern void Start_SDLMixer(AUDIO_CONF *audio_conf);
 extern void music_process_stick(int evcode);
 extern void sound_process_stick(int evcode);
 
 extern KBDEVENT *kbd_get_event();
+extern void btapi_send_report(uint8_t *ptr, int len);
+extern void btapi_push_report();
+extern void btapi_start_scan();
+extern void btapi_disconnect();
 #endif

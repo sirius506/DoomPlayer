@@ -19,11 +19,13 @@
 /* USER CODE END Header */
 
 /* Includes ------------------------------------------------------------------*/
+#include "stm32h7xx_hal.h"
+#include "stm32h7xx_ll_usb.h"
+#include "main.h"
 #include "usbh_core.h"
 #include "usbh_platform.h"
 
 /* USER CODE BEGIN Includes */
-#include "main.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -133,12 +135,10 @@ void HAL_HCD_MspInit(HCD_HandleTypeDef* hcdHandle)
     __HAL_RCC_USB_OTG_HS_ULPI_CLK_ENABLE();
 
     /* Peripheral interrupt init */
-#if 1
     HAL_NVIC_SetPriority(OTG_HS_EP1_OUT_IRQn, 6, 0);
     HAL_NVIC_EnableIRQ(OTG_HS_EP1_OUT_IRQn);
     HAL_NVIC_SetPriority(OTG_HS_EP1_IN_IRQn, 6, 0);
     HAL_NVIC_EnableIRQ(OTG_HS_EP1_IN_IRQn);
-#endif
     HAL_NVIC_SetPriority(OTG_HS_IRQn, 6, 0);
     HAL_NVIC_EnableIRQ(OTG_HS_IRQn);
   /* USER CODE BEGIN USB_OTG_HS_MspInit 1 */
@@ -214,8 +214,12 @@ void HAL_HCD_SOF_Callback(HCD_HandleTypeDef *hhcd)
   HAL_GPIO_TogglePin(SOF_Port, SOF_Pin);
 #endif
 #ifdef USE_HIGH_SPEED
+  uint32_t USBx_BASE = (uint32_t)USBx;
   fnum = USBx_HOST->HFNUM;
-  if ((fnum & 0x07) == 0)
+
+  /* If high speed device, ignore 7/8 events */
+  if ((USB_GetHostSpeed(USBx) == 0) && (fnum & 0x07))
+    return;
 #endif
    USBH_LL_IncTimer(hhcd->pData);
 }
@@ -501,11 +505,15 @@ USBH_StatusTypeDef USBH_LL_SubmitURB(USBH_HandleTypeDef *phost, uint8_t pipe, ui
   HAL_StatusTypeDef hal_status = HAL_OK;
   USBH_StatusTypeDef usb_status = USBH_OK;
   HCD_URBStateTypeDef urb_state;
+  HCD_HandleTypeDef *hhcd = (HCD_HandleTypeDef *)phost->pData;
 
   urb_state =  HAL_HCD_HC_GetURBState (phost->pData, pipe);
   if (urb_state != URB_IDLE && urb_state != URB_DONE)
   {
+   if (urb_state != URB_NOTREADY)
     debug_printf("%s: pipe = %d, st = %x\n", __FUNCTION__, pipe, urb_state);
+     hhcd->hc[pipe].urb_state = URB_IDLE; 
+     hhcd->hc[pipe].state = 0; 
   }
   hal_status = HAL_HCD_HC_SubmitRequest(phost->pData, pipe, direction ,
                                         ep_type, token, pbuff, length,

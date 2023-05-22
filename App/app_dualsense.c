@@ -8,6 +8,7 @@
 #include "DoomPlayer.h"
 #include "lvgl.h"
 #include "dualsense_report.h"
+#include "gamepad.h"
 #include "app_task.h"
 #include "app_gui.h"
 
@@ -47,6 +48,17 @@ void Display_DualSense_Info(struct dualsense_input_report *rp, uint8_t hat, uint
   ev.evcode = GUIEV_DUALTEST_UPDATE;
   ev.evval0 = vbutton;
   ev.evarg1 = &test_report;
+  ev.evarg2 = NULL;
+  postGuiEvent(&ev);
+}
+
+void Display_GamePad_Info(struct gamepad_inputs *rp, uint32_t vbutton)
+{
+  GUI_EVENT ev;
+
+  ev.evcode = GUIEV_DUALTEST_UPDATE;
+  ev.evval0 = vbutton;
+  ev.evarg1 = rp;
   ev.evarg2 = NULL;
   postGuiEvent(&ev);
 }
@@ -93,7 +105,6 @@ lv_obj_t *dualtest_create()
   const GUI_LAYOUT *layout = &GuiLayout;
 
   scr = lv_obj_create(NULL);
-  //lv_obj_set_size(scr, 500, 400);
   lv_obj_set_size(scr, LCD_WIDTH, LCD_HEIGHT);
 
   /* Load dualsense photo image */
@@ -202,13 +213,12 @@ lv_obj_set_style_pad_right(yaw, 0, LV_PART_KNOB);
 #define	TP_XSCALE(l, x)	(x * l->padi_width / DS_TOUCHPAD_WIDTH)
 #define	TP_YSCALE(l, y)	(y * l->padi_height / DS_TOUCHPAD_HEIGHT)
 
-void dualtest_update(struct dualsense_input_report *rp, uint32_t vbutton)
+void dualtest_update(struct gamepad_inputs *rp, uint32_t vbutton)
 {
   const GUI_LAYOUT *layout = &GuiLayout;
 
-  struct dualsense_touch_point *tp;
+  struct gamepad_touch_point *tp;
   int xpos, ypos;
-  int wx, wy;
   int i;
   int mask = 1;
   int16_t angle;
@@ -255,10 +265,8 @@ void dualtest_update(struct dualsense_input_report *rp, uint32_t vbutton)
   }
   else
   {
-    wx = ((tp->x_hi << 8) | tp->x_lo);
-    wy = ((tp->y_hi << 4) | tp->y_lo);
-    xpos = TP_XSCALE(layout, wx) + layout->padi_xpos;	// PADI_XPOS;
-    ypos = TP_YSCALE(layout, wy) + layout->padi_ypos;	// PADI_YPOS;
+    xpos = TP_XSCALE(layout, tp->xpos) + layout->padi_xpos;	// PADI_XPOS;
+    ypos = TP_YSCALE(layout, tp->ypos) + layout->padi_ypos;	// PADI_YPOS;
     lv_obj_align(pad1, LV_ALIGN_TOP_LEFT, xpos, ypos);
     lv_obj_clear_flag(pad1, LV_OBJ_FLAG_HIDDEN);
   }
@@ -269,10 +277,8 @@ void dualtest_update(struct dualsense_input_report *rp, uint32_t vbutton)
   }
   else
   {
-    wx = ((tp->x_hi << 8) | tp->x_lo);
-    wy = ((tp->y_hi << 4) | tp->y_lo);
-    xpos = TP_XSCALE(layout, wx) + layout->padi_xpos;	// PADI_XPOS;
-    ypos = TP_YSCALE(layout, wy) + layout->padi_ypos;	// PADI_YPOS;
+    xpos = TP_XSCALE(layout, tp->xpos) + layout->padi_xpos;	// PADI_XPOS;
+    ypos = TP_YSCALE(layout, tp->ypos) + layout->padi_ypos;	// PADI_YPOS;
     lv_obj_align(pad2, LV_ALIGN_TOP_LEFT, xpos, ypos);
     lv_obj_clear_flag(pad2, LV_OBJ_FLAG_HIDDEN);
   }

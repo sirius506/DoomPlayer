@@ -71,7 +71,7 @@ static const uint8_t modcode[8] = {
 
 void send_modkey_event(HID_HandleTypeDef *HID_Handle, int evcode, int bpos)
 {
-  if (HID_Handle->hid_mode == HID_MODE_DOOM)
+  if (HID_Handle->report.hid_mode == HID_MODE_DOOM)
   {
     if (modcode[bpos])
     {
@@ -89,7 +89,7 @@ void send_key_event(HID_HandleTypeDef *HID_Handle, int evcode, int kbdcode, int 
 {
   static lv_indev_data_t pad_data;
 
-  switch (HID_Handle->hid_mode)
+  switch (HID_Handle->report.hid_mode)
   {
   case HID_MODE_DOOM:
     keyev.evcode = evcode;

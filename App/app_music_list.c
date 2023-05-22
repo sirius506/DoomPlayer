@@ -459,7 +459,7 @@ static void scroll_cb(lv_event_t *event)
   }
 }
 
-lv_obj_t *music_player_create(int dev_flag, lv_group_t *g, lv_style_t *btn_style, lv_indev_t *keypad_dev)
+lv_obj_t *music_player_create(AUDIO_CONF *audio_config, lv_group_t *g, lv_style_t *btn_style, lv_indev_t *keypad_dev)
 {
   QSPI_DIRHEADER *dirInfo = (QSPI_DIRHEADER *)QSPI_ADDR;
   FS_DIRENT *dirent;
@@ -469,7 +469,7 @@ lv_obj_t *music_player_create(int dev_flag, lv_group_t *g, lv_style_t *btn_style
 
   LoadMusicConfigs();
 
-  play_frequency = (dev_flag & MIXER_USB_OUTPUT)? 48000 : 44100;
+  play_frequency = audio_config->playRate;
 debug_printf("freq = %d\n", play_frequency);
 
   dirent = dirInfo->fs_direntry;

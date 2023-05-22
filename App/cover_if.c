@@ -45,7 +45,6 @@ void register_cover_file(FS_DIRENT *dirent)
         cfp->fname = dirent->fname;
         cfp->faddr = (uint8_t *) bp;
         cfp->fsize = dirent->fsize;
-debug_printf("%s: %d @%x\n", mbuffer, cfp->fsize, cfp->faddr);
         cfp->next = cover_top;
         cover_top = cfp;
       }

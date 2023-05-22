@@ -861,7 +861,7 @@ static boolean I_SDL_InitMusic(void)
             music_initialized = true;
         }
 #else
-        Start_SDLMixer(get_mix_mode());
+        Start_Doom_SDLMixer();
 #endif
     }
 

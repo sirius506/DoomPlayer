@@ -10,22 +10,19 @@
 #include "dualsense_report.h"
 
 static SDL_Joystick *active_stick;
+static SDL_Joystick thisDevice;
+
+SDL_Joystick *
+SDL_GetJoystickPtr()
+{
+  return &thisDevice;
+}
 
 SDL_Joystick *
 SDL_JoystickOpen(int device_index)
 {
-  SDL_Joystick *joystick;
-
-  joystick = malloc(sizeof(SDL_Joystick));
-  memset(joystick, 0, sizeof(SDL_Joystick));
-  joystick->name = "DualSence";
-  joystick->naxes = 1;
-  joystick->nhats = 1;
-  joystick->nbuttons = 17;
-  joystick->hats = 0;
-  joystick->buttons = 0;;
-  active_stick = joystick;
-  return joystick;
+  active_stick = (thisDevice.name)?  &thisDevice : NULL;
+  return active_stick;
 }
 
 /*
@@ -146,21 +143,13 @@ SDL_JoystickName(SDL_Joystick *joystick)
 void SDL_JoystickClose(SDL_Joystick *joystick)
 {
    active_stick = NULL;
-   free(joystick);
 }
 
-static const uint8_t hatmap[16] = {
-  SDL_HAT_UP,       SDL_HAT_RIGHTUP,   SDL_HAT_RIGHT,    SDL_HAT_RIGHTDOWN,
-  SDL_HAT_DOWN,     SDL_HAT_LEFTDOWN,  SDL_HAT_LEFT,     SDL_HAT_LEFTUP,
-  SDL_HAT_CENTERED, SDL_HAT_CENTERED,  SDL_HAT_CENTERED, SDL_HAT_CENTERED,
-  SDL_HAT_CENTERED, SDL_HAT_CENTERED,  SDL_HAT_CENTERED, SDL_HAT_CENTERED,
-};
-
-void Generate_DOOM_Keycode(struct dualsense_input_report *rp, uint8_t hat, uint32_t vbutton)
+void SDL_JoyStickSetButtons(uint8_t hat, uint32_t vbutton)
 {
   if (active_stick)
   {
-    active_stick->hats = hatmap[hat];
+    active_stick->hats = hat;
     active_stick->buttons = vbutton & 0x7FFF;
   }
 }

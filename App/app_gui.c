@@ -3,12 +3,14 @@
  */
 #include <stdio.h>
 #include "DoomPlayer.h"
+#include "gamepad.h"
 #include "board_if.h"
 #include "app_task.h"
 #include "app_sound.h"
 #include "app_gui.h"
 #include "usbh_hid.h"
 #include "jpeg_if.h"
+#include "audio_output.h"
 
 #define USE_WAIT_CB
 
@@ -54,6 +56,26 @@ const GUI_EVENT reboot_event = {
 
 const WADPROP InvalidFlashGame =
  { 0, 0, NULL, "Game not written" };
+
+
+/** I2S audio configuration is always availablle
+ */
+static AUDIO_CONF I2S_Audio_Conf = {
+  .mix_mode = MIXER_I2S_OUTPUT|MIXER_FFT_ENABLE,
+  .playRate = 44100,
+  .numChan = 2,
+  .msec_fsize = 177,
+  .pDriver = &i2s_output_driver,
+};
+
+/**
+ *  USB audio configuration becames available when
+ *  supported gamepad has detected.
+ */
+static AUDIO_CONF *usb_audio_conf;
+
+static AUDIO_CONF *current_audio_conf;
+
 
 /**
  * Draw buffers
@@ -273,7 +295,7 @@ const GUI_EVENT touch_event = {
   NULL
 };
 
-static void event_cb(lv_event_t *e)
+static void reboot_event_cb(lv_event_t *e)
 {
   postGuiEvent(&reboot_event);
 }
@@ -324,6 +346,20 @@ static void copy_event_cb(lv_event_t *e)
   postGuiEvent(&ev);
 }
 
+static void pairing_btn_event_cb(lv_event_t *e)
+{
+  uint16_t index;
+  lv_obj_t * obj = lv_event_get_current_target(e);
+
+  index = lv_msgbox_get_active_btn(obj);
+  if (index == 0)
+  {
+    debug_printf("NEED PAIRING!\n");
+    btapi_start_scan();
+  }
+  postGuiEventMessage(GUIEV_PAIRING_CLOSE, 0, NULL, NULL);
+}
+
 /**
  * @brief Called when Game menu button has clicked.
  */
@@ -355,7 +391,7 @@ SOUND_SCREEN SoundScreen;
 
 static const char * const copy_buttons[] = { "Yes", "Cancel", "" };
 static const char * const reboot_btn[] = { "Reboot", "" };
-static int mix_mode;
+static const char * const pairing_btn[] = { "Yes", "Skip", "" };
 
 /**
  * @brief Change audio button text when clicked.
@@ -368,19 +404,21 @@ static void audio_button_handler(lv_event_t *e)
   if (lv_obj_get_state(btn) & LV_STATE_CHECKED)
   {
     lv_label_set_text(label, "USB");
-    mix_mode = MIXER_USB_OUTPUT;
+    current_audio_conf = usb_audio_conf;
   }
   else
   {
     lv_label_set_text(label, "I2S");
-    mix_mode = MIXER_I2S_OUTPUT;
+    current_audio_conf = &I2S_Audio_Conf;
   }
 }
 
+#if 0
 int get_mix_mode()
 {
   return mix_mode;
 }
+#endif
 
 /*
  * Called by hid_dualsense to send a LVGL keycode.
@@ -488,6 +526,24 @@ void lv_timer_handler_hook()
 #endif
 }
 
+/* Space, USB, Space, Bluetooth, Space, Battery */
+static char icon_label_string[13] = {
+  ' ',			// 0
+  ' ', ' ', ' ',	// 1
+  ' ',			// 4
+  ' ', ' ', ' ',	// 5
+  ' ',			// 8
+  ' ', ' ', ' ',	// 9
+  0x00 };
+
+static const char *icon_map[] = {
+  LV_SYMBOL_BATTERY_EMPTY,
+  LV_SYMBOL_BATTERY_1,
+  LV_SYMBOL_BATTERY_2,
+  LV_SYMBOL_BATTERY_3,
+  LV_SYMBOL_BATTERY_FULL,
+};
+
 /*
  * Our LVGL processing task. We'll create GUI screens and
  * process GUI update request events.
@@ -506,6 +562,7 @@ void StartLvglTask(void *argument)
   lv_obj_t *fbutton;
   lv_style_t game_style;
   lv_style_t style_menubtn;
+  int reboot_prompt;
   START_SCREEN *starts = &StartScreen;
   MENU_SCREEN *menus = &MenuScreen;
   COPY_SCREEN *copys = &CopyScreen;
@@ -519,9 +576,13 @@ void StartLvglTask(void *argument)
   lv_msgbox_t *mbox;
   uint8_t *bp;
   int img_offset;
-  int dual_found = 0;
+  lv_obj_t *icon_label;
+  uint16_t icon_value;
+  GAMEPAD_INFO *padInfo;
 
+  padInfo = NULL;
   fnum = 0;
+  icon_value = 0;
 
   static lv_group_t *g;
 
@@ -532,7 +593,7 @@ void StartLvglTask(void *argument)
   lvtask_initialize(&LTDC_HANDLE);
   lvgl_active = 1;
 
-  mix_mode = MIXER_I2S_OUTPUT;
+  current_audio_conf = &I2S_Audio_Conf;
 
   lv_style_init(&style_title);
   lv_style_set_text_font(&style_title,  layout->font_title);
@@ -540,6 +601,9 @@ void StartLvglTask(void *argument)
   lv_style_init(&style_menubtn);
   lv_style_set_outline_width(&style_menubtn, layout->mb_olw);
 
+  icon_label = lv_label_create(lv_layer_top());
+  //lv_label_set_text(icon_label, " " LV_SYMBOL_USB " " LV_SYMBOL_BLUETOOTH);
+  lv_label_set_text(icon_label, (const char *)icon_label_string);
   starts->screen = lv_obj_create(NULL);
   menus->screen = lv_obj_create(NULL);
   copys->screen = lv_obj_create(NULL);
@@ -622,7 +686,9 @@ void StartLvglTask(void *argument)
 
   postMainRequest(REQ_VERIFY_SD, NULL, 0);	// Start SD card verification
 
+  reboot_prompt = 0;
   timer_interval = 3;
+  lv_obj_t *pmobj = NULL;
 
   while (1)
   {
@@ -636,15 +702,32 @@ void StartLvglTask(void *argument)
       case GUIEV_TOUCH_INT:
         process_touch();
         break;
-      case GUIEV_DUALSENSE_READY:
-        debug_printf("DualSense detected.\n");
+      case GUIEV_PAIRING_OPEN:
+        if (reboot_prompt == 0)
+        {
+          pmobj = lv_msgbox_create(NULL, "Bluetooth dongle found.", "Enter pairing mode?", (const char **)pairing_btn, false);
+          lv_obj_center(pmobj);
+          lv_obj_add_event_cb(pmobj, pairing_btn_event_cb, LV_EVENT_CLICKED, NULL);
+        }
+        break;
+      case GUIEV_PAIRING_CLOSE:
+        if (pmobj)
+        {
+          lv_msgbox_close(pmobj);
+          pmobj = NULL;
+        }
+        break;
+      case GUIEV_GAMEPAD_READY:
+        padInfo = (GAMEPAD_INFO *)event.evarg1;
+        debug_printf("%s Detected.\n", padInfo->name);
+        break;
+      case GUIEV_USB_AUDIO_READY:
+        usb_audio_conf = (AUDIO_CONF *)event.evarg1;
         lv_obj_clear_flag(menus->cont_audio, LV_OBJ_FLAG_HIDDEN);	// Make audio selection visible
-        dual_found = 1;
         if (menus->btn_dual)
           lv_obj_clear_state(menus->btn_dual, LV_STATE_DISABLED);
         break;
       case GUIEV_MUSIC_FINISH:
-        debug_printf("MUSIC_FINISH\n");
         _lv_demo_inter_pause_start();
         break;
       case GUIEV_SD_REPORT:		// SD card verification has finished
@@ -686,8 +769,9 @@ void StartLvglTask(void *argument)
           g = lv_group_create();
           lv_group_add_obj(g, starts->btn);
           lv_indev_set_group(keypad_dev, g);
-          lv_obj_add_event_cb(starts->mbox, event_cb, LV_EVENT_PRESSED, NULL);
+          lv_obj_add_event_cb(starts->mbox, reboot_event_cb, LV_EVENT_PRESSED, NULL);
           lv_obj_center(starts->mbox);
+          reboot_prompt = 1;
         }
         break;
       case GUIEV_FLASH_REPORT:			// SPI flash verification finished
@@ -774,6 +858,8 @@ void StartLvglTask(void *argument)
               lv_obj_center(label);
             }
           }
+          if (event.evval0 == 0)
+            StartUsb();
         }
         break;
       case GUIEV_FLASH_GAME_SELECT:
@@ -815,7 +901,7 @@ void StartLvglTask(void *argument)
 	ADD_MENU_BUTTON(btn_dual, "DualSense\n Demo", GUIEV_DUALTEST_START)
 	ADD_MENU_BUTTON(btn_game, "Game", GUIEV_GAME_START)
 
-        if (!dual_found)
+        if (padInfo == NULL)
         {
           /* DualSense is not detected, yet. Disable DualSense demo button. */
           lv_obj_add_state(menus->btn_dual, LV_STATE_DISABLED);
@@ -833,7 +919,7 @@ void StartLvglTask(void *argument)
         lv_obj_t *blabel = lv_label_create(menus->btn_audio);
         lv_obj_set_height(menus->btn_audio, layout->audio_button_height);
         lv_obj_add_flag(menus->btn_audio, LV_OBJ_FLAG_CHECKABLE);
-        if (mix_mode == MIXER_I2S_OUTPUT)
+        if (current_audio_conf == &I2S_Audio_Conf)
         {
           lv_obj_clear_state(menus->btn_audio, LV_STATE_CHECKED);
           lv_label_set_text(blabel, "I2S");
@@ -888,6 +974,8 @@ void StartLvglTask(void *argument)
         lv_indev_set_group(keypad_dev, starts->ing);
         break;
       case GUIEV_REBOOT:
+        btapi_disconnect();
+        osDelay(200);
         NVIC_SystemReset();
         break;
       case GUIEV_ERASE_REPORT:
@@ -906,8 +994,9 @@ void StartLvglTask(void *argument)
           g = lv_group_create();
           lv_group_add_obj(g, mbox->btns);
           lv_indev_set_group(keypad_dev, g);
-          lv_obj_add_event_cb(starts->mbox, event_cb, LV_EVENT_VALUE_CHANGED, NULL);
+          lv_obj_add_event_cb(starts->mbox, reboot_event_cb, LV_EVENT_VALUE_CHANGED, NULL);
           lv_obj_center(starts->mbox);
+          reboot_prompt = 1;
           break;
         case OP_PROGRESS:
           sprintf(sbuff, "%d%%", (int)event.evarg1);
@@ -935,7 +1024,9 @@ void StartLvglTask(void *argument)
           mbox = (lv_msgbox_t *)copys->mbox;
           lv_group_add_obj(g, mbox->btns);
           lv_indev_set_group(keypad_dev, g);
-          lv_obj_center(starts->mbox);
+          lv_obj_center(copys->mbox);
+          lv_obj_center(copys->mbox);
+          reboot_prompt = 1;
           break;
         case OP_PROGRESS:
           sprintf(sbuff, "%d%%", (int)event.evarg1);
@@ -952,20 +1043,14 @@ void StartLvglTask(void *argument)
           mbox = (lv_msgbox_t *)copys->mbox;
           lv_group_add_obj(g, mbox->btns);
           lv_indev_set_group(keypad_dev, g);
-          lv_obj_add_event_cb(copys->mbox, event_cb, LV_EVENT_VALUE_CHANGED, NULL);
+          lv_obj_add_event_cb(copys->mbox, reboot_event_cb, LV_EVENT_VALUE_CHANGED, NULL);
           lv_obj_center(copys->mbox);
+          reboot_prompt = 1;
           break;
         }
         break;
       case GUIEV_SPLAYER_START:
-        if (lv_obj_get_state(menus->btn_audio) & LV_STATE_CHECKED)
-        {
-          Start_SDLMixer(MIXER_USB_OUTPUT|MIXER_FFT_ENABLE);
-        }
-        else
-        {
-          Start_SDLMixer(MIXER_I2S_OUTPUT|MIXER_FFT_ENABLE);
-        }
+        Start_SDLMixer(current_audio_conf);
         lv_obj_add_flag(menus->cont_audio, LV_OBJ_FLAG_HIDDEN);
         lv_scr_load(sounds->screen);
         lv_indev_set_group(keypad_dev, sounds->ing);
@@ -975,8 +1060,8 @@ void StartLvglTask(void *argument)
         {
           menus->player_ing = lv_group_create();
           lv_indev_set_group(keypad_dev, menus->player_ing);
-          Start_SDLMixer(mix_mode|MIXER_FFT_ENABLE);
-          menus->play_scr = music_player_create(mix_mode, menus->player_ing, &style_menubtn, keypad_dev);
+          Start_SDLMixer(current_audio_conf);
+          menus->play_scr = music_player_create(current_audio_conf, menus->player_ing, &style_menubtn, keypad_dev);
           lv_obj_add_flag(menus->cont_audio, LV_OBJ_FLAG_HIDDEN);
         }
         else
@@ -986,7 +1071,11 @@ void StartLvglTask(void *argument)
         }
         break;
       case GUIEV_DUALTEST_START:
-        HID_Set_TestMode();
+        if (padInfo)
+        {
+          padInfo->padDriver->ResetFusion();
+          GamepadHidMode(padInfo, HID_TEST_BIT);
+        }
         if (menus->sub_scr == NULL)
           menus->sub_scr = dualtest_create(g);
         lv_scr_load(menus->sub_scr);
@@ -995,7 +1084,8 @@ void StartLvglTask(void *argument)
         dualtest_update(event.evarg1, event.evval0);
         break;
       case GUIEV_DUALTEST_DONE:
-        HID_Set_LVGLMode();
+        if (padInfo)
+          GamepadHidMode(padInfo, HID_LVGL_BIT);
         /* Fall down to .. */
       case GUIEV_MPLAYER_DONE:
         /*
@@ -1013,7 +1103,8 @@ void StartLvglTask(void *argument)
         lv_scr_load(games->screen);
 
         Board_DoomModeLCD();
-        HID_Set_DoomMode();
+        if (padInfo)
+          GamepadHidMode(padInfo, HID_DOOM_BIT);
 
         if (menus->sub_scr)
           lv_obj_del(menus->sub_scr);
@@ -1112,6 +1203,48 @@ void StartLvglTask(void *argument)
         else if (lv_scr_act() == menus->play_scr)
           music_process_stick(event.evcode);
         break;
+      case GUIEV_ICON_CHANGE:
+        {
+          int ival;
+          char *sp;
+
+          ival = event.evval0;
+          if (ival & ICON_BATTERY)
+          {
+            icon_value &= ~ICON_BATTERY_MASK;
+            icon_value |= ival & ICON_BATTERY_MASK;
+            icon_value |= ICON_BATTERY;
+          }
+          else
+          {
+            if (ival & ICON_SET)
+              icon_value |= (ival & (ICON_USB|ICON_BLUETOOTH));
+            else
+              icon_value &= ~(ival & (ICON_USB|ICON_BLUETOOTH));
+          }
+          sp = icon_label_string;
+          *sp++ = ' ';
+          if (icon_value & ICON_USB)
+          {
+            strncpy(sp, LV_SYMBOL_USB, 3);
+            sp += 3;
+            *sp++ = ' ';
+          }
+          if (icon_value & ICON_BLUETOOTH)
+          {
+            strncpy(sp, LV_SYMBOL_BLUETOOTH, 3);
+            sp += 3;
+            *sp++ = ' ';
+          }
+          if (icon_value & ICON_BATTERY)
+          {
+            strncpy(sp, icon_map[icon_value & ICON_BATTERY_MASK], 3);
+            sp += 3;
+          }
+          *sp = 0;
+          lv_label_set_text(icon_label, (const char *)icon_label_string);
+        }
+        break;
       default:
         break;
       }
@@ -1142,4 +1275,19 @@ void app_endoom(uint8_t *bp)
 void app_screenshot()
 {
   postGuiEventMessage(GUIEV_LVGL_CAPTURE, 0, NULL, NULL);
+}
+
+void app_pairing_open()
+{
+  postGuiEventMessage(GUIEV_PAIRING_OPEN, 0, NULL, NULL);
+}
+
+void app_pairing_close()
+{
+  postGuiEventMessage(GUIEV_PAIRING_CLOSE, 0, NULL, NULL);
+}
+
+AUDIO_CONF *get_audio_conf()
+{
+  return current_audio_conf;
 }

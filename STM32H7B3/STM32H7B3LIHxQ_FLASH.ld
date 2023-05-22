@@ -71,9 +71,6 @@ AHBSRAM2 (rw)   : ORIGIN = 0x30010000, LENGTH = 64K
 SRDSRAM (rw)    : ORIGIN = 0x38000000, LENGTH = 32K
 FLASH   (rx)    : ORIGIN = 0x08000000, LENGTH = 2048K
 }
-/*
-AHBSRAM2 (rw)   : ORIGIN = 0x30010000, LENGTH = 64K
-*/
 
 /* Define output sections */
 SECTIONS

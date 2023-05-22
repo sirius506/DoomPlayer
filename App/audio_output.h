@@ -1,11 +1,10 @@
-#ifndef __AUDIO_OUTPUT_H__
-#define __AUDIO_OUTPUT_H__
+#ifndef _AUDIO_OUTPUT_H
+#define _AUDIO_OUTPUT_H
 
 #include "mplayer.h"
 
 typedef enum {
-  MIX_FILL_HALF = 1,
-  MIX_FILL_FULL,
+  MIX_DATA_REQ = 1,
   MIX_PLAY,
   MIX_PAUSE,
   MIX_RESUME,
@@ -37,17 +36,32 @@ typedef struct {
   int       option;
 } MIXCONTROL_EVENT;
 
-typedef struct s_audio_output_driver {
-  void    (*Init)(struct s_audio_output_driver *pdriver);
-  void    (*Start)(struct s_audio_output_driver *pdriver);
-  void    (*Stop)(struct s_audio_output_driver *pdriver);
-  void    (*MixSound)(struct s_audio_output_driver *pdriver, int foffset, const AUDIO_STEREO *psrc);
+struct s_audio_conf;
+
+typedef struct {
+  void    (*Init)(struct s_audio_conf *audio_conf);
+  void    (*Start)(struct s_audio_conf *audio_conf);
+  void    (*Stop)(struct s_audio_conf *audio_conf);
+  void    (*MixSound)(struct s_audio_conf *audio_conf, const AUDIO_STEREO *psrc, int num_frame);
+#ifdef XXX
   void    (*SendSound)(struct s_audio_output_driver *pdriver, int foffset, const AUDIO_STEREO *psrc);
+#endif
   void    (*SetVolume)(int vol);
   uint8_t *sound_buffer;
   int     sound_buffer_size;
+  uint8_t         *freebuffer_ptr;
+  uint8_t         *playbuffer_ptr;
+  uint8_t         play_index;		// msec position in one buffer
   osMutexId_t soundLockId;
 } AUDIO_OUTPUT_DRIVER;
+
+typedef struct s_audio_conf {
+  uint16_t mix_mode;
+  uint16_t playRate;
+  uint16_t numChan;
+  uint16_t msec_fsize;
+  AUDIO_OUTPUT_DRIVER *pDriver;
+} AUDIO_CONF;
 
 extern MIX_INFO MixInfo;
 

@@ -4,9 +4,9 @@
 #include "usbh_core.h"
 #include "usbh_hid.h"
 #include "usbh_audio.h"
+#include "usbh_bluetooth.h"
 #include "stm32h7b3i_discovery_conf.h"
 
-extern SPI_HandleTypeDef hspi5;
 extern USBH_StatusTypeDef  USBH_Start(USBH_HandleTypeDef *phost);
 extern USBH_StatusTypeDef USBH_RegisterClass(USBH_HandleTypeDef *phost, USBH_ClassTypeDef *pclass);
 
@@ -78,8 +78,29 @@ void URBChangeCallback(HCD_HandleTypeDef *hhcd, uint8_t channel, USB_OTG_URBStat
 {
   USBH_HandleTypeDef *phost;
   osEventFlagsId_t evflag;
+  osMessageQueueId_t evqueue;
 
   phost = (USBH_HandleTypeDef *)hhcd->pData;
+  evqueue = phost->PipeEvq[channel & 0x0F];
+  if (evqueue)
+  {
+    PIPE_EVENT evdata;
+
+    evdata.channel = channel;
+    evdata.state = state;
+#if 1
+    if (state == URB_NOTREADY)
+    {
+      //if (channel == 3) debug_printf("BK not ready\n");
+      if (hhcd->hc[channel].state != HC_HALTED)
+        return;
+    }
+#endif
+    if (osMessageQueuePut(evqueue, &evdata, 0, 0) != osOK)
+debug_printf("pipe_ev overflow. %d, %x\n", channel, state);
+    return;
+  }
+
   evflag = phost->PipeFlags[channel & 0x0F];
   if (evflag)
   {
@@ -93,7 +114,6 @@ void URBChangeCallback(HCD_HandleTypeDef *hhcd, uint8_t channel, USB_OTG_URBStat
        break;
      case URB_NOTREADY:
        osEventFlagsSet(evflag, EVF_URB_NOTREADY);
-debug_printf("URB_NOTREADY\n");
        break;
      case URB_NYET:
        osEventFlagsSet(evflag, EVF_URB_NYET);
@@ -154,6 +174,10 @@ void StartUsb()
   }
 #endif
 
+  if (USBH_RegisterClass(phost, USBH_BLUETOOTH_CLASS) != USBH_OK)
+  {
+    Error_Handler();
+  }
   if (USBH_RegisterClass(phost, USBH_AUDIO_CLASS) != USBH_OK)
   {
     Error_Handler();

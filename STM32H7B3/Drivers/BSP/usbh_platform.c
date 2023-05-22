@@ -34,6 +34,7 @@
   */
 void MX_DriverVbusHS(uint8_t state)
 {
+#if 0
   uint8_t data = state;
   /* USER CODE BEGIN PREPARE_GPIO_DATA_VBUS_HS */
   if(state == 0)
@@ -48,5 +49,6 @@ void MX_DriverVbusHS(uint8_t state)
   }
   /* USER CODE END PREPARE_GPIO_DATA_VBUS_HS */
   HAL_GPIO_WritePin(GPIOF,GPIO_PIN_10,(GPIO_PinState)data);
+#endif
 }
 

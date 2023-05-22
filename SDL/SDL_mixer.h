@@ -30,7 +30,6 @@ typedef struct Mix_Music {
 #define	MIXER_SOUND_ENABLE (1<<2)
 #define	MIXER_FFT_ENABLE   (1<<3)
 
-extern void Start_SDLMixer(int mode);
 extern int Mix_Started();
 
 extern Mix_Music *Mix_LoadMUS(const char *file);

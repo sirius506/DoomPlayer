@@ -123,7 +123,7 @@ void StartDefaultTask(void *argv)
 
   osThreadNew(StartShotTask, NULL, &attributes_shotTask);
 
-  StartUsb();
+  //StartUsb();
 
   /* Let's try to create SCREEN_DIR and find possible initial errors. */
 
@@ -160,9 +160,14 @@ void StartDefaultTask(void *argv)
   {
     REQUEST_CMD request;
     WADLIST *game;
+    int qst;
 
-    if (osMessageQueueGet(reqcmdqId, &request, NULL, wait_time) != osOK)
+    qst = osMessageQueueGet(reqcmdqId, &request, NULL, wait_time);
+    if (qst != osOK)
+    {
+      debug_printf("qst = %d\n", qst);
       NVIC_SystemReset();
+    }
 
     switch (request.cmd)
     {
@@ -186,7 +191,8 @@ void StartDefaultTask(void *argv)
       CopyFlash(game, (uint32_t)res);
       break;
     case REQ_END_DOOM:
-      wait_time = 2000;
+      wait_time = 3000;
+      btapi_disconnect();
       break;
     case REQ_DUMMY:
       if (wait_time != osWaitForever)

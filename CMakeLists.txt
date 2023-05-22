@@ -106,8 +106,10 @@ FetchContent_Declare(
 FetchContent_Declare(
   lvgl
   GIT_REPOSITORY https://github.com/lvgl/lvgl.git
-  GIT_TAG f29514aa5c34d84f69a7ed30835bbffc5cbd515c
+  GIT_TAG 2b56e04205481daa6575bd5f7ab5df59d11676eb
 )
+
+  #GIT_TAG f29514aa5c34d84f69a7ed30835bbffc5cbd515c
 
 FetchContent_MakeAvailable(drlib lvgl)
 
@@ -133,6 +135,7 @@ target_include_directories(DoomPlayer.elf PUBLIC
   Fusion
   SDL
   USB
+  btstack/src
   FATFS/App
   FATFS/Target
   ${lvgl_SOURCE_DIR}
@@ -147,6 +150,7 @@ target_include_directories(DoomPlayer.elf PUBLIC
 add_subdirectory(${TARGET}/Drivers)
 add_subdirectory(Middlewares)
 add_subdirectory(USB)
+add_subdirectory(btstack)
 add_subdirectory(Fusion)
 add_subdirectory(chocolate-doom)
 
@@ -182,8 +186,24 @@ target_include_directories(doom PUBLIC
   SDL
 )
 
+target_include_directories(btstack PUBLIC 
+  ${TARGET}/Core/Inc
+  App
+  Fusion
+  btstack/src
+  btstack
+  btstack/platform/freertos
+  ${DRIVERS_INCLUDE}
+  ${MIDDLE_INCLUDE}
+  RTT
+  USB
+  ${lvgl_SOURCE_DIR}
+)
+
 target_include_directories(usb PUBLIC 
   App
+  btstack/src
+  btstack
   ${TARGET}/Core/Inc
   ${DRIVERS_INCLUDE}
   ${lvgl_SOURCE_DIR}
@@ -206,6 +226,7 @@ target_compile_definitions(lvgl PUBLIC USE_HAL_DRIVER ${CPUDEV} ARM_MATH_CM7)
 
 target_link_libraries(DoomPlayer.elf PRIVATE
   usb
+  btstack
   doom
   middlewares
   drivers

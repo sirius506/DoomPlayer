@@ -358,7 +358,6 @@ void _lv_demo_music_album_next(bool next)
 
 static void inter_pause_timeout(lv_timer_t *t)
 {
-debug_printf("%s\n", __FUNCTION__);
     lv_timer_del(t);
     inter_pause_timer = NULL;
     _lv_demo_music_album_next(true);
@@ -366,7 +365,6 @@ debug_printf("%s\n", __FUNCTION__);
 
 void _lv_demo_inter_pause_start()
 {
-debug_printf("%s\n", __FUNCTION__);
     lv_timer_pause(sec_counter_timer);
     inter_pause_timer = lv_timer_create(inter_pause_timeout, 800, NULL);
 }
@@ -458,7 +456,12 @@ static lv_obj_t * create_cont(lv_obj_t * parent)
 
     lv_obj_set_style_bg_color(player, lv_color_hex(0xffffff), 0);
     lv_obj_set_style_border_width(player, 0, 0);
+#if 1
+    lv_obj_set_style_pad_hor(player, 0, 0);
+    lv_obj_set_style_pad_ver(player, 0, 0);
+#else
     lv_obj_set_style_pad_all(player, 0, 0);
+#endif
     lv_obj_set_scroll_dir(player, LV_DIR_VER);
 
     /* Transparent placeholders below the player container
@@ -549,7 +552,6 @@ static lv_obj_t * create_title_box(lv_obj_t * parent)
     lv_obj_remove_style_all(cont);
     lv_obj_set_height(cont, LV_SIZE_CONTENT);
     lv_obj_set_flex_flow(cont, LV_FLEX_FLOW_COLUMN);
-    //lv_obj_set_flex_align(cont, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_set_flex_align(cont, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
     title_label = lv_label_create(cont);
@@ -843,7 +845,6 @@ static void track_load(uint32_t id)
     lv_slider_set_value(slider_obj, 0, LV_ANIM_OFF);
     lv_label_set_text(time_obj, "0:00");
 
-debug_printf("%s: %d, %d\n", __FUNCTION__, id, track_id);
     if(id == track_id) return;
     bool next = false;
 
@@ -1173,7 +1174,6 @@ static lv_obj_t * album_img_create(lv_obj_t * parent)
     cfp = track_cover(id);
     if (cfp)
     {
-// debug_printf("cover%d %d @ %x\n", id, cfp->fsize, cfp->faddr);
       imgdesc.header.always_zero = 0;
       imgdesc.header.w = 128;
       imgdesc.header.h = 128;

@@ -9,6 +9,8 @@
 extern LTDC_HandleTypeDef LTDC_HANDLE;
 extern DMA2D_HandleTypeDef DMA2D_HANDLE;
 
+extern void mix_request_data(int full);
+
 static int board_lcd_mode;
 
 const GUI_LAYOUT GuiLayout = {
@@ -114,7 +116,7 @@ void Board_LCD_Init()
   BSP_LCD_Init(0, LCD_ORIENTATION_LANDSCAPE);
   BSP_LCD_SetLayerVisible(0, 0, DISABLE);		// Disable DOOM layer
   BSP_LCD_SetLayerVisible(0, 1, ENABLE);		// Enable LVGL layer
-  BSP_LCD_SetBrightness(0, 90);
+  BSP_LCD_SetBrightness(0, 80);
   board_lcd_mode = LCD_MODE_LVGL;
 }
 
@@ -172,24 +174,18 @@ void BSP_TS_Callback(uint32_t Instance)
 
 void BSP_AUDIO_OUT_TransferComplete_CallBack(uint32_t Instance)
 {
-  MIXCONTROL_EVENT evcode;
-
   /* Prevent unused argument(s) compilation warning */
   UNUSED(Instance);
 
-  evcode.event = MIX_FILL_FULL;
-  osMessageQueuePut(MixInfo.mixevqId, &evcode, 0, 0);
+  mix_request_data(1);
 }
 
 void BSP_AUDIO_OUT_HalfTransfer_CallBack(uint32_t Instance)
 {
-  MIXCONTROL_EVENT evcode;
-
   /* Prevent unused argument(s) compilation warning */
   UNUSED(Instance);
 
-  evcode.event = MIX_FILL_HALF;
-  osMessageQueuePut(MixInfo.mixevqId, &evcode, 0, 0);
+  mix_request_data(0);
 }
 
 void Board_SetVolume(int vol)

@@ -110,6 +110,7 @@ static boolean IsValidAxis(int axis)
     return axis < num_axes;
 }
 
+#if 0
 static int DeviceIndex(void)
 {
    extern osThreadId_t hidtaskId;
@@ -121,6 +122,7 @@ static int DeviceIndex(void)
    }
    return 0;
 }
+#endif
 
 void I_InitJoystick(void)
 {
@@ -134,6 +136,7 @@ void I_InitJoystick(void)
 #endif
 osDelay(50);
 
+#if 0
     index = DeviceIndex();
 
     if (index < 0)
@@ -144,6 +147,9 @@ debug_printf("failed to find joystick\n");
                joystick_guid);
         return;
     }
+#else
+    index = 0;
+#endif
 
     // Open the joystick
 
