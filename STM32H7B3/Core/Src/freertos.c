@@ -93,6 +93,9 @@ __weak void PostSleepProcessing(uint32_t ulExpectedIdleTime)
 
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */
-
+void vApplicationStackOverflowHook(xTaskHandle *pxTask, signed portCHAR *pcTaskName)
+{
+  debug_printf("Stack overflow @ %s\n", pcTaskName);
+}
 /* USER CODE END Application */
 

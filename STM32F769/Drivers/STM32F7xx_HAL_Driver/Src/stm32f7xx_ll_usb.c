@@ -1860,12 +1860,13 @@ HAL_StatusTypeDef USB_HC_Init(USB_OTG_GlobalTypeDef *USBx, uint8_t ch_num,
   {
     case EP_TYPE_CTRL:
     case EP_TYPE_BULK:
-      USBx_HC((uint32_t)ch_num)->HCINTMSK = USB_OTG_HCINTMSK_XFRCM  |
+     USBx_HC((uint32_t)ch_num)->HCINTMSK = USB_OTG_HCINTMSK_XFRCM  |
                                             USB_OTG_HCINTMSK_STALLM |
                                             USB_OTG_HCINTMSK_TXERRM |
                                             USB_OTG_HCINTMSK_DTERRM |
-                                            USB_OTG_HCINTMSK_AHBERR |
-                                            USB_OTG_HCINTMSK_NAKM;
+                                            USB_OTG_HCINTMSK_AHBERR;
+      if (ep_type == EP_TYPE_CTRL)
+        USBx_HC((uint32_t)ch_num)->HCINTMSK |= USB_OTG_HCINTMSK_NAKM;
 
       if ((epnum & 0x80U) == 0x80U)
       {
@@ -1948,7 +1949,8 @@ HAL_StatusTypeDef USB_HC_Init(USB_OTG_GlobalTypeDef *USBx, uint8_t ch_num,
   USBx_HC((uint32_t)ch_num)->HCCHAR = (((uint32_t)dev_address << 22) & USB_OTG_HCCHAR_DAD) |
                                       ((((uint32_t)epnum & 0x7FU) << 11) & USB_OTG_HCCHAR_EPNUM) |
                                       (((uint32_t)ep_type << 18) & USB_OTG_HCCHAR_EPTYP) |
-                                      ((uint32_t)mps & USB_OTG_HCCHAR_MPSIZ) | HCcharEpDir | HCcharLowSpeed;
+                                      ((uint32_t)mps & USB_OTG_HCCHAR_MPSIZ) |
+				      USB_OTG_HCCHAR_MC_0 | HCcharEpDir | HCcharLowSpeed;
 
   if ((ep_type == EP_TYPE_INTR) || (ep_type == EP_TYPE_ISOC))
   {
