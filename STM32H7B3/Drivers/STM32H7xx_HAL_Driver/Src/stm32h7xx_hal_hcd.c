@@ -1008,6 +1008,10 @@ HAL_StatusTypeDef HAL_HCD_UnRegisterHC_NotifyURBChangeCallback(HCD_HandleTypeDef
 HAL_StatusTypeDef HAL_HCD_Start(HCD_HandleTypeDef *hhcd)
 {
   __HAL_LOCK(hhcd);
+  /* Disable port power */
+  (void)USB_DriveVbus(hhcd->Instance, 0U);
+  HAL_Delay(150);
+
   /* Enable port power */
   (void)USB_DriveVbus(hhcd->Instance, 1U);
 
@@ -1256,6 +1260,7 @@ debug_printf("CH %d, TXERR\n", chnum);
 #ifdef ORG_CODE
       if ((((hhcd->hc[chnum].xfer_count + hhcd->hc[chnum].max_packet - 1U) / hhcd->hc[chnum].max_packet) & 1U) != 0U)
 #else
+#ifdef HCD_DEBUG
       int v1, v2, v3;
 
       v1 = hhcd->hc[chnum].xfer_count + hhcd->hc[chnum].max_packet - 1U;
@@ -1268,6 +1273,7 @@ debug_printf("xfer_count = %d, XferSize = %d, max_packet = %d\n",
  hhcd->hc[chnum].XferSize,
  hhcd->hc[chnum].max_packet);
       }
+#endif
 
       if (((hhcd->hc[chnum].XferSize / hhcd->hc[chnum].max_packet) & 1U) != 0U)
 #endif
