@@ -39,6 +39,9 @@
 #define QUEUE_SIZE         (uint32_t) 10
 #define READ_CPLT_MSG      (uint32_t) 1
 #define WRITE_CPLT_MSG     (uint32_t) 2
+
+static uint8_t sdqBuffer[QUEUE_SIZE * sizeof(uint16_t)];
+MESSAGEQ_DEF(sdevq, sdqBuffer, sizeof(sdqBuffer))
 /*
 ==================================================================
 enable the defines below to send custom rtos messages
@@ -209,7 +212,8 @@ Stat = STA_NOINIT;
       osMessageQDef(SD_Queue, QUEUE_SIZE, uint16_t);
       SDQueueID = osMessageCreate (osMessageQ(SD_Queue), NULL);
 #else
-      SDQueueID = osMessageQueueNew(QUEUE_SIZE, 2, NULL);
+      //SDQueueID = osMessageQueueNew(QUEUE_SIZE, 2, NULL);
+      SDQueueID = osMessageQueueNew(QUEUE_SIZE, 2, &attributes_sdevq);
 #endif
       }
 
@@ -349,7 +353,7 @@ DRESULT SD_read(BYTE lun, BYTE *buff, DWORD sector, UINT count)
               /* block until SDIO IP is ready or a timeout occur */
               while(osKernelSysTick() - timer <SD_TIMEOUT)
 #else
-                status = osMessageQueueGet(SDQueueID, (void *)&event, NULL, SD_TIMEOUT);
+              status = osMessageQueueGet(SDQueueID, (void *)&event, NULL, SD_TIMEOUT);
               if ((status == osOK) && (event == READ_CPLT_MSG))
               {
                 timer = osKernelGetTickCount();
