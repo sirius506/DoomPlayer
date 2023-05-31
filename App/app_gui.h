@@ -64,6 +64,7 @@ typedef struct {
   lv_obj_t *btn_game;
   lv_obj_t *btn_audio;
   lv_obj_t *cont_audio;
+  lv_obj_t *cont_bt;
   lv_group_t *ing;		// Input group
   lv_obj_t *sub_scr;
   lv_obj_t *play_scr;
@@ -96,4 +97,6 @@ typedef struct {
 
 extern const GUI_LAYOUT GuiLayout;
 extern void send_padkey(lv_indev_data_t *pdata);
+extern void app_pairing_open();
+extern void app_pairing_close();
 #endif

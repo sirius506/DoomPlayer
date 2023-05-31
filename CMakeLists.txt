@@ -56,6 +56,7 @@ add_executable(DoomPlayer.elf
   ${TARGET}/Core/Src/system_${FAMILY}.c
   ${TARGET}/Core/Src/usb_host.c
   ${TARGET}/Core/Src/usbh_conf.c
+  ${TARGET}/btimg.c
   RTT/SEGGER_RTT.c
   RTT/SEGGER_RTT_printf.c
   App/app_console.c
@@ -154,7 +155,7 @@ add_subdirectory(btstack)
 add_subdirectory(Fusion)
 add_subdirectory(chocolate-doom)
 
-target_compile_options(lvgl PUBLIC -mcpu=cortex-m7 -mthumb -mfpu=fpv5-d16 -mfloat-abi=hard -O2 -Wall -fdata-sections -ffunction-sections -g -gdwarf-2
+target_compile_options(lvgl PUBLIC -mcpu=cortex-m7 -mthumb -mfpu=fpv5-d16 -mfloat-abi=hard -O1 -Wall -fdata-sections -ffunction-sections -g -gdwarf-2
 )
 
 target_include_directories(lvgl PUBLIC

@@ -51,6 +51,7 @@ typedef enum {
   GUIEV_SD_REPORT,		// Report REQ_VERIFY_SD result
   GUIEV_FLASH_REPORT,		// Report REQ_VERIFY_FLASH result
   GUIEV_ICON_CHANGE,		// Set/Change Icon label
+  GUIEV_BLUETOOTH_READY,
   GUIEV_MPLAYER_START,		// Start Music Player
   GUIEV_SPLAYER_START,		// Start Sound Player
   GUIEV_MPLAYER_DONE,

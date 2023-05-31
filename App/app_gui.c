@@ -21,6 +21,8 @@ TASK_DEF(doomTask, 2400, osPriorityBelowNormal)
 extern DMA2D_HandleTypeDef DMA2D_HANDLE;
 extern LTDC_HandleTypeDef LTDC_HANDLE;
 
+LV_IMG_DECLARE(btimg)
+
 #define GUIEVQ_DEPTH     10
 
 static uint8_t guievqBuffer[GUIEVQ_DEPTH * sizeof(GUI_EVENT)];
@@ -413,12 +415,13 @@ static void audio_button_handler(lv_event_t *e)
   }
 }
 
-#if 0
-int get_mix_mode()
+/**
+ * @brief Bluetooth button handler. Send disconnect event to BTstack.
+ */
+static void bt_button_handler(lv_event_t *e)
 {
-  return mix_mode;
+   btapi_disconnect();
 }
-#endif
 
 /*
  * Called by hid_dualsense to send a LVGL keycode.
@@ -544,6 +547,12 @@ static const char *icon_map[] = {
   LV_SYMBOL_BATTERY_FULL,
 };
 
+GAMEPAD_INFO nullPad = {
+  .name = "Dummy Controller",
+  .hid_mode = HID_MODE_LVGL,
+  .padDriver = NULL,
+};
+
 /*
  * Our LVGL processing task. We'll create GUI screens and
  * process GUI update request events.
@@ -580,7 +589,7 @@ void StartLvglTask(void *argument)
   uint16_t icon_value;
   GAMEPAD_INFO *padInfo;
 
-  padInfo = NULL;
+  padInfo = &nullPad;
   fnum = 0;
   icon_value = 0;
 
@@ -643,6 +652,15 @@ void StartLvglTask(void *argument)
   lv_obj_set_size(menus->cont_audio, layout->audio_box_width, layout->audio_box_height);
   lv_obj_align(menus->cont_audio, LV_ALIGN_CENTER, 0, layout->audio_box_yoffset);
   lv_obj_add_flag(menus->cont_audio, LV_OBJ_FLAG_HIDDEN);
+
+  /* Prepare Bluetooth image buffon. */
+
+  menus->cont_bt = lv_imgbtn_create(menus->screen);
+  lv_imgbtn_set_src(menus->cont_bt, LV_IMGBTN_STATE_RELEASED, NULL, &btimg, NULL);
+  lv_obj_align(menus->cont_bt, LV_ALIGN_CENTER, 0, layout->audio_box_yoffset);
+  lv_obj_set_width(menus->cont_bt, LV_SIZE_CONTENT);
+  lv_obj_add_event_cb(menus->cont_bt, bt_button_handler, LV_EVENT_CLICKED, NULL);
+  lv_obj_add_flag(menus->cont_bt, LV_OBJ_FLAG_HIDDEN);
 
   /* Create Game screen and fill with CHROMA_KEY color,
    * then it will become transparent.
@@ -707,6 +725,7 @@ void StartLvglTask(void *argument)
         {
           pmobj = lv_msgbox_create(NULL, "Bluetooth dongle found.", "Enter pairing mode?", (const char **)pairing_btn, false);
           lv_obj_center(pmobj);
+          lv_obj_set_width(pmobj, W_PERCENT(40));
           lv_obj_add_event_cb(pmobj, pairing_btn_event_cb, LV_EVENT_CLICKED, NULL);
         }
         break;
@@ -720,6 +739,20 @@ void StartLvglTask(void *argument)
       case GUIEV_GAMEPAD_READY:
         padInfo = (GAMEPAD_INFO *)event.evarg1;
         debug_printf("%s Detected.\n", padInfo->name);
+        break;
+      case GUIEV_BLUETOOTH_READY:
+        if (event.evval0 == 0)
+        {
+          /* Bluetooth disconnected. Hide the image button. */
+          lv_obj_add_flag(menus->cont_bt, LV_OBJ_FLAG_HIDDEN);
+          lv_obj_add_state(menus->btn_dual, LV_STATE_DISABLED);
+        }
+        else
+        {
+          /* Bluetooth connection established. Display the image button. */
+          lv_obj_clear_flag(menus->cont_bt, LV_OBJ_FLAG_HIDDEN);
+          lv_obj_clear_state(menus->btn_dual, LV_STATE_DISABLED);
+        }
         break;
       case GUIEV_USB_AUDIO_READY:
         usb_audio_conf = (AUDIO_CONF *)event.evarg1;
@@ -901,7 +934,7 @@ void StartLvglTask(void *argument)
 	ADD_MENU_BUTTON(btn_dual, "DualSense\n Demo", GUIEV_DUALTEST_START)
 	ADD_MENU_BUTTON(btn_game, "Game", GUIEV_GAME_START)
 
-        if (padInfo == NULL)
+        if (padInfo->padDriver == NULL)
         {
           /* DualSense is not detected, yet. Disable DualSense demo button. */
           lv_obj_add_state(menus->btn_dual, LV_STATE_DISABLED);
@@ -1071,10 +1104,10 @@ void StartLvglTask(void *argument)
         }
         break;
       case GUIEV_DUALTEST_START:
-        if (padInfo)
+        if (padInfo->padDriver)
         {
           padInfo->padDriver->ResetFusion();
-          GamepadHidMode(padInfo, HID_TEST_BIT);
+          GamepadHidMode(padInfo, HID_MODE_TEST);
         }
         if (menus->sub_scr == NULL)
           menus->sub_scr = dualtest_create(g);
@@ -1084,8 +1117,7 @@ void StartLvglTask(void *argument)
         dualtest_update(event.evarg1, event.evval0);
         break;
       case GUIEV_DUALTEST_DONE:
-        if (padInfo)
-          GamepadHidMode(padInfo, HID_LVGL_BIT);
+        GamepadHidMode(padInfo, HID_MODE_LVGL);
         /* Fall down to .. */
       case GUIEV_MPLAYER_DONE:
         /*
@@ -1097,21 +1129,24 @@ void StartLvglTask(void *argument)
       case GUIEV_GAME_START:
         if (g)
           lv_group_del(g);
-        Mix_HaltMusic();		// Make sure to stop music playing
+        lv_obj_add_flag(icon_label, LV_OBJ_FLAG_HIDDEN);
+        GamepadHidMode(padInfo, HID_MODE_DOOM);
         Mix_FFT_Disable();
+        osThreadYield();
+        Mix_HaltMusic();		// Make sure to stop music playing
         osThreadYield();
         lv_scr_load(games->screen);
 
         Board_DoomModeLCD();
-        if (padInfo)
-          GamepadHidMode(padInfo, HID_DOOM_BIT);
 
         if (menus->sub_scr)
           lv_obj_del(menus->sub_scr);
+        osDelay(100);
         doomtaskId = osThreadNew(StartDoomTask, &doom_argv, &attributes_doomTask);
         break;
       case GUIEV_FFT_UPDATE:
-        app_spectrum_update(event.evval0);
+        if (padInfo->hid_mode != HID_MODE_DOOM)
+          app_spectrum_update(event.evval0);
         break;
       case GUIEV_PSEC_UPDATE:
         app_psec_update(event.evval0);
@@ -1220,7 +1255,17 @@ void StartLvglTask(void *argument)
             if (ival & ICON_SET)
               icon_value |= (ival & (ICON_USB|ICON_BLUETOOTH));
             else
+            {
               icon_value &= ~(ival & (ICON_USB|ICON_BLUETOOTH));
+
+              if (ival & ICON_BLUETOOTH)
+              {
+                /* If BT connection is lost,
+                 * we no longer able to get battery level.
+                 */
+                icon_value &= ~ICON_BATTERY;
+              }
+            }
           }
           sp = icon_label_string;
           *sp++ = ' ';
