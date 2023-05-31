@@ -391,8 +391,6 @@ debug_printf("freq = %d --> %d\n", AUDIO_Handle->sampleFreq, max_msec);
 
   UngrabUrb(phost);
 
-  phost->PipeFlags[AUDIO_Handle->headphone.Pipe & 0x0F] = 0;
-
   done_flag = 1;
 
   while (1)

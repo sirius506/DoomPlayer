@@ -37,9 +37,10 @@ struct sGamePadDriver {
   void (*GetOutputReport)(uint8_t **ptr, int *plen, int hid_mode, uint8_t sofc);
   void (*DecodeInputReport)(HID_REPORT *report);
   void (*btSetup)(uint16_t cid);
-  void (*btProcessGetReport)(uint8_t *report, int len);
+  void (*btProcessGetReport)(const uint8_t *report, int len);
   void (*btReleaseBuffer)(uint8_t *bp);
   void (*ResetFusion)(void);
+  void (*btDisconnect)(void);
 };
 
 typedef struct sGamePadInfo {

@@ -491,6 +491,16 @@ USBH_StatusTypeDef USBH_LL_SubmitURB(USBH_HandleTypeDef *phost, uint8_t pipe, ui
 {
   HAL_StatusTypeDef hal_status = HAL_OK;
   USBH_StatusTypeDef usb_status = USBH_OK;
+  HCD_URBStateTypeDef urb_state;
+  HCD_HandleTypeDef *hhcd = (HCD_HandleTypeDef *)phost->pData;
+
+  urb_state =  HAL_HCD_HC_GetURBState (phost->pData, pipe);
+  if (urb_state != URB_IDLE && urb_state != URB_DONE)
+  {
+    //debug_printf("%s: pipe = %d, st = %x\n", __FUNCTION__, pipe, urb_state);
+     hhcd->hc[pipe].urb_state = URB_IDLE;
+     hhcd->hc[pipe].state = 0;
+  }
 
   hal_status = HAL_HCD_HC_SubmitRequest(phost->pData, pipe, direction ,
                                         ep_type, token, pbuff, length,

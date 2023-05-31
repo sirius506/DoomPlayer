@@ -1,5 +1,5 @@
 /**
- * @brief SONY Dual Shock 4 Controller driver
+ * @brief SONY DUALSHOCK 4 Controller driver
  */
 #include "DoomPlayer.h"
 #include "Fusion.h"
@@ -108,7 +108,7 @@ static int16_t get_le16val(uint8_t *bp)
 
 static int16_t calibVals[17];
 
-static void process_calibdata(struct ds_data *ds, uint8_t *dp)
+static void process_calibdata(struct ds_data *ds, uint8_t *dp, int btmode)
 {
   int16_t gyro_pitch_bias, gyro_yaw_bias, gyro_roll_bias;
   int16_t gyro_pitch_plus, gyro_pitch_minus;
@@ -122,16 +122,29 @@ static void process_calibdata(struct ds_data *ds, uint8_t *dp)
   float flNumerator;
   int range_2g;
 
-debug_printf("CalibData id = %x\n", dp[0]);
   calibVals[0] = gyro_pitch_bias = get_le16val(dp + 1);
   calibVals[1] = gyro_yaw_bias = get_le16val(dp + 3);
   calibVals[2] = gyro_roll_bias = get_le16val(dp + 5);
-  calibVals[3] = gyro_pitch_plus = get_le16val(dp + 7);
-  calibVals[4] = gyro_pitch_minus = get_le16val(dp + 9);
-  calibVals[5] = gyro_yaw_plus = get_le16val(dp + 11);
-  calibVals[6] = gyro_yaw_minus = get_le16val(dp + 13);
-  calibVals[7] = gyro_roll_plus = get_le16val(dp + 15);
-  calibVals[8] = gyro_roll_minus = get_le16val(dp + 17);
+
+  if (btmode == 0)
+  {
+    calibVals[3] = gyro_pitch_plus = get_le16val(dp + 7);
+    calibVals[4] = gyro_pitch_minus = get_le16val(dp + 9);
+    calibVals[5] = gyro_yaw_plus = get_le16val(dp + 11);
+    calibVals[6] = gyro_yaw_minus = get_le16val(dp + 13);
+    calibVals[7] = gyro_roll_plus = get_le16val(dp + 15);
+    calibVals[8] = gyro_roll_minus = get_le16val(dp + 17);
+  }
+  else
+  {
+    calibVals[3] = gyro_pitch_plus = get_le16val(dp + 7);
+    calibVals[4] = gyro_pitch_minus = get_le16val(dp + 13);
+    calibVals[5] = gyro_yaw_plus = get_le16val(dp + 9);
+    calibVals[6] = gyro_yaw_minus = get_le16val(dp + 15);
+    calibVals[7] = gyro_roll_plus = get_le16val(dp + 11);
+    calibVals[8] = gyro_roll_minus = get_le16val(dp + 17);
+  }
+
   calibVals[9] = gyro_speed_plus = get_le16val(dp + 19);
   calibVals[10] = gyro_speed_minus = get_le16val(dp + 21);
   calibVals[11] = acc_x_plus = get_le16val(dp + 23);
@@ -140,7 +153,6 @@ debug_printf("CalibData id = %x\n", dp[0]);
   calibVals[14] = acc_y_minus = get_le16val(dp + 29);
   calibVals[15] = acc_z_plus = get_le16val(dp + 31);
   calibVals[16] = acc_z_minus = get_le16val(dp + 33);
-  osDelay(5);
 
   /*
    * Set gyroscope calibration and normalization parameters.
@@ -163,17 +175,14 @@ debug_printf("CalibData id = %x\n", dp[0]);
    * Data values will be normalized to 1/DS4_ACC_RES_PER_G g.
    */
   range_2g = acc_x_plus - acc_x_minus;
-//debug_printf("range_2g: %d, ", range_2g);
   ds->accel_calib_data[0].bias = acc_x_plus - range_2g / 2;
   ds->accel_calib_data[0].sensitivity = 2.0f * DS4_ACC_RES_PER_G / (float)range_2g;
 
   range_2g = acc_y_plus - acc_y_minus;
-//debug_printf("%d, ", range_2g);
   ds->accel_calib_data[1].bias = acc_y_plus - range_2g / 2;
   ds->accel_calib_data[1].sensitivity = 2.0f * DS4_ACC_RES_PER_G / (float)range_2g;
 
   range_2g = acc_z_plus - acc_z_minus;
-//debug_printf("%d\n", range_2g);
   ds->accel_calib_data[2].bias = acc_z_plus - range_2g / 2;
   ds->accel_calib_data[2].sensitivity = 2.0f * DS4_ACC_RES_PER_G / (float)range_2g;
 }
@@ -212,7 +221,7 @@ static void DualShockSetup(USBH_ClassTypeDef *pclass)
   st = USBH_HID_GetReport(pclass->phost, 3, DS4_FEATURE_REPORT_CALIBRATION, ds4calibdata, DS4_FEATURE_REPORT_CALIBRATION_SIZE);
 
   (void) st;
-  process_calibdata(&DsData, ds4calibdata);
+  process_calibdata(&DsData, ds4calibdata, 0);
 
   set_joystick_params();
 }
@@ -294,8 +303,6 @@ static void ds4_process_fusion(struct ds4_input_report *rp)
       accelerometer.array[i] = calib_data / DS4_ACC_RES_PER_G;
 #endif
   }
-//debug_printf("%d, %d, %d\n", (int) accelerometer.array[0], (int)accelerometer.array[1], (int)accelerometer.array[2]);
-//debug_printf("%d, %d, %d\n", le16_to_cpu(rp->accel[0]),  le16_to_cpu(rp->accel[1]),  le16_to_cpu(rp->accel[2]));
 
   gamepad_process_fusion(SAMPLE_PERIOD, gyroscope, accelerometer);
 }
@@ -341,16 +348,24 @@ void process_output_report(int hid_mode)
 }
 
 static uint8_t prev_blevel;
+static uint16_t prev_stamp;
+
+static void DualShockBtDisconnect()
+{
+  prev_blevel = 0;
+}
 
 /*
- * Decode DualSense Input report
+ * Decode DualShock Input report
  */
 static void DualShockDecodeInputReport(HID_REPORT *report)
 {
   DS4_INPUT_REPORT *rp;
   static uint32_t in_seq;
   uint8_t blevel;
- 
+  uint8_t ctype;
+  int tdiff;
+
   switch (report->len)
   {
   case DS4_INPUT_REPORT_USB_SIZE:
@@ -362,29 +377,42 @@ static void DualShockDecodeInputReport(HID_REPORT *report)
     return;
   }
 
-  switch (report->ptr[0])
+  ctype = report->ptr[0];
+
+  switch (ctype)
   {
   case DS4_INPUT_REPORT_USB:
     /*Fill report */
-    rp = &ds4_cur_report;
     SCB_InvalidateDCache_by_Addr((uint32_t *)report->ptr, REPORT_SIZE);
     memcpy(&ds4_cur_report, report->ptr + 1, sizeof(DS4_INPUT_REPORT));
     break;
   case DS4_INPUT_REPORT_BT:
-    rp = (DS4_INPUT_REPORT *)(report->ptr + 3);
+    memcpy(&ds4_cur_report, report->ptr + 3, sizeof(DS4_INPUT_REPORT));
     break;
   default:
     return;
   }
+  rp = &ds4_cur_report;
+ 
+  if (rp->timestamp == prev_stamp)
+    return;
+  tdiff = rp->timestamp - prev_stamp;
+  if (tdiff < 0) tdiff += 65536;
 
-  ds4_process_fusion(rp);
+  if ((ctype == DS4_INPUT_REPORT_BT) && (tdiff < 1000))
+  {
+    return;
+  }
+  prev_stamp = rp->timestamp;
+
+  if (report->hid_mode != HID_MODE_DOOM)
+    ds4_process_fusion(rp);
 
   {
     uint8_t hat;
     uint32_t vbutton;
 
     hat = (rp->buttons[0] & 0x0f);
-//debug_printf("BUT2: %02x\n", rp->buttons[2] & 0x03);
     vbutton = (rp->buttons[2] & 0x03) << 12;	/* Home, Pad */
     vbutton |= rp->buttons[1] << 4;		/* L1, R1, L2, R2, Share, Option, L3, R3 */
     vbutton |= (rp->buttons[0] & 0xf0)>> 4;	/* Square, Cross, Circle, Triangle */
@@ -534,19 +562,21 @@ static void DualShock_DOOM_Keycode(struct ds4_input_report *rp, uint8_t hat, uin
 
 void DualShockBtSetup(uint16_t hid_host_cid)
 {
+  memset(ds4calibdata, 0, sizeof(ds4calibdata));
   hid_host_send_get_report(hid_host_cid, HID_REPORT_TYPE_FEATURE, DS4_FEATURE_REPORT_CALIBRATION_BT);
   set_joystick_params();
 
   out_index = 0;
 }
 
-void DualShockBtProcessCalibReport(uint8_t *bp, int len)
+void DualShockBtProcessCalibReport(const uint8_t *bp, int len)
 {
-  if (len == DS4_FEATURE_REPORT_CALIBRATION_SIZE)
+  if (len == DS4_FEATURE_REPORT_CALIBRATION_SIZE+4)
   {
-    process_calibdata(&DsData, bp);
+    memcpy(ds4calibdata, bp, DS4_FEATURE_REPORT_CALIBRATION_SIZE + 4);
+    process_calibdata(&DsData, ds4calibdata, 1);
   }
-  //setup_fusion();
+  setup_fusion(SAMPLE_RATE, &settings);
   //SDL_JoystickOpen(0);
 }
 
@@ -573,6 +603,8 @@ static void DualShock_Display_Status(struct ds4_input_report *rp, uint8_t hat, u
   gin->vbutton = vbutton;
   memcpy(gin->gyro, rp->gyro, sizeof(int16_t) * 3);
   memcpy(gin->accel, rp->accel, sizeof(int16_t) * 3);
+//debug_printf("accel: %d, %d, %d\n", gin->accel[0], gin->accel[1], gin->accel[2]);
+//debug_printf("gyro: %d, %d, %d\n", gin->gyro[0], gin->gyro[1], gin->gyro[2]);
 
   if (rep->ptr[0] == DS4_INPUT_REPORT_USB)
   {
@@ -615,4 +647,5 @@ const struct sGamePadDriver DualShockDriver = {
   DualShockBtProcessCalibReport,	// BT
   DualShockReleaseACLBuffer,		// BT
   DualShockResetFusion,			// USB and BT
+  DualShockBtDisconnect,		// BT
 };

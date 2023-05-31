@@ -77,7 +77,6 @@ static uint32_t USB_ULPI_Write(uint32_t Addr, uint32_t Data)   /* Parameter is t
 void URBChangeCallback(HCD_HandleTypeDef *hhcd, uint8_t channel, USB_OTG_URBStateTypeDef state)
 {
   USBH_HandleTypeDef *phost;
-  osEventFlagsId_t evflag;
   osMessageQueueId_t evqueue;
 
   phost = (USBH_HandleTypeDef *)hhcd->pData;
@@ -101,38 +100,7 @@ debug_printf("pipe_ev overflow. %d, %x\n", channel, state);
     return;
   }
 
-  evflag = phost->PipeFlags[channel & 0x0F];
-  if (evflag)
-  {
-     switch (state)
-     {
-     case URB_IDLE:
-       //osEventFlagsSet(evflag, EVF_URB_IDLE);
-       //break;
-     case URB_DONE:
-       osEventFlagsSet(evflag, EVF_URB_DONE);
-       break;
-     case URB_NOTREADY:
-       osEventFlagsSet(evflag, EVF_URB_NOTREADY);
-       break;
-     case URB_NYET:
-       osEventFlagsSet(evflag, EVF_URB_NYET);
-debug_printf("URB_NOT_YET\n");
-       break;
-     case URB_ERROR:
-       osEventFlagsSet(evflag, EVF_URB_ERROR);
-debug_printf("URB_ERROR\n");
-       break;
-     case URB_STALL:
-debug_printf("URB_STALL\n");
-       osEventFlagsSet(evflag, EVF_URB_STALL);
-       break;
-     default:
-debug_printf("state = %x\n", state);
-       break;
-     }
-  }
-  else if (phost->urb_thread)
+  if (phost->urb_thread)
   {
      osThreadFlagsSet(phost->urb_thread, 1);
   }

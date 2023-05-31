@@ -336,6 +336,11 @@ static void dualsense_process_fusion(struct dualsense_input_report *rp)
 
 static uint8_t prev_blevel;
 
+static void DualSenseBtDisconnect()
+{
+  prev_blevel = 0;
+}
+
 /*
  * Decode DualSense Input report
  */
@@ -386,7 +391,8 @@ static void DualSenseDecodeInputReport(HID_REPORT *report)
     return;
   }
 
-  dualsense_process_fusion(rp);
+  if (report->hid_mode != HID_MODE_DOOM)
+    dualsense_process_fusion(rp);
 
   switch (rp->report_id)
   {
@@ -431,11 +437,11 @@ void DualSenseReleaseACLBuffer(uint8_t *bp)
   osMessageQueuePut(btreportqId, &bp, 0, 0);
 }
 
-void DualSenseProcessCalibReport(uint8_t *bp, int len)
+void DualSenseProcessCalibReport(const uint8_t *bp, int len)
 {
   if (len == DS_FEATURE_REPORT_CALIBRATION_SIZE)
   {
-    process_calibdata(&DsData, bp);
+    process_calibdata(&DsData, (uint8_t *)bp);
 
     initial_report = 0;
     set_joystick_params();
@@ -720,4 +726,5 @@ const struct sGamePadDriver DualSenseDriver = {
   DualSenseProcessCalibReport,		// BT
   DualSenseReleaseACLBuffer,		// BT
   DualSenseResetFusion,			// USB and BT
+  DualSenseBtDisconnect,		// BT
 };

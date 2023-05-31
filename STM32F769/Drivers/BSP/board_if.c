@@ -157,18 +157,12 @@ void Board_Touch_GetState(lv_indev_data_t *tp)
 
 void BSP_AUDIO_OUT_TransferComplete_CallBack(void)
 {
-  MIXCONTROL_EVENT evcode;
-
-  evcode.event = MIX_FILL_FULL;
-  osMessageQueuePut(MixInfo.mixevqId, &evcode, 0, 0);
+  mix_request_data(1);
 }
 
 void BSP_AUDIO_OUT_HalfTransfer_CallBack(void)
 {
-  MIXCONTROL_EVENT evcode;
-
-  evcode.event = MIX_FILL_HALF;
-  osMessageQueuePut(MixInfo.mixevqId, &evcode, 0, 0);
+  mix_request_data(0);
 }
 
 void Board_SetVolume(int vol)

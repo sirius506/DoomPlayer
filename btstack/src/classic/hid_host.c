@@ -53,7 +53,7 @@
 #include "classic/sdp_util.h"
 #include "classic/sdp_client.h"
 
-#define MAX_ATTRIBUTE_VALUE_SIZE 300
+#define MAX_ATTRIBUTE_VALUE_SIZE 480
 
 #define CONTROL_MESSAGE_BITMASK_SUSPEND             1
 #define CONTROL_MESSAGE_BITMASK_EXIT_SUSPEND        2

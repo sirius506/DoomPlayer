@@ -97,6 +97,9 @@ MESSAGEQ_DEF(evbuffq, evptrBuffer, sizeof(evptrBuffer))
 HCIIF_INFO HciIfInfo;
 
 extern void postHCIEvent(uint8_t ptype, uint8_t *pkt, uint16_t size);
+extern void transport_set_send_now(int val);
+extern void usbh_bluetooth_send_cmd(const uint8_t * packet, uint16_t len);
+extern void set_hid_class(USBH_ClassTypeDef *class);
 
 // class state
 static USB_Bluetooth_t usb_bluetooth;
@@ -119,7 +122,8 @@ static uint8_t *aclptrBuffer[BUFFQ_DEPTH];
 MESSAGEQ_DEF(aclbuffq, aclptrBuffer, sizeof(aclptrBuffer))
 
 #define	BTD_STACK_SIZE	500
-TASK_DEF(btdtask, BTD_STACK_SIZE, osPriorityNormal5)
+//TASK_DEF(btdtask, BTD_STACK_SIZE, osPriorityNormal5)
+TASK_DEF(btdtask, BTD_STACK_SIZE, osPriorityAboveNormal5)
 
 #define	BTS_STACK_SIZE	800
 TASK_DEF(btstacktask, BTS_STACK_SIZE, osPriorityNormal2)
@@ -207,14 +211,8 @@ USBH_StatusTypeDef USBH_Bluetooth_InterfaceInit(USBH_ClassTypeDef *pclass, USBH_
     USBH_LL_SetToggle(phost, usb->acl_out_pipe, 0U);
 debug_printf("pipe: event = %d, acl_in = %d, acl_out = %d\n", usb->event_in_pipe, usb->acl_in_pipe, usb->acl_out_pipe);
 
-    pclass->cState = 1;
     pclass->phost = phost;
     pclass->classEventQueue = osMessageQueueNew(EVMSGQ_DEPTH, sizeof(PIPE_EVENT), &attributes_evmsgq);
-
-    pclass->phost->PipeEvq[0] = pclass->classEventQueue;
-    pclass->phost->PipeEvq[usb->event_in_pipe & 0x0F] = pclass->classEventQueue;
-    pclass->phost->PipeEvq[usb->acl_in_pipe & 0x0F] = pclass->classEventQueue;
-    pclass->phost->PipeEvq[usb->acl_out_pipe & 0x0F] = pclass->classEventQueue;
 
     HCIIF_INFO *info;
 
@@ -225,7 +223,7 @@ debug_printf("pipe: event = %d, acl_in = %d, acl_out = %d\n", usb->event_in_pipe
     set_hid_class(pclass);
 
     osThreadNew(StartBTDongleTask, pclass, &attributes_btdtask);
-    osThreadNew(StartBtstackTask, NULL, &attributes_btstacktask);
+    //osThreadNew(StartBtstackTask, NULL, &attributes_btstacktask);
 
     return USBH_OK;
 }
@@ -252,6 +250,9 @@ USBH_StatusTypeDef USBH_Bluetooth_Process(USBH_ClassTypeDef *pclass, USBH_Handle
 USBH_StatusTypeDef USBH_Bluetooth_SOFProcess(USBH_ClassTypeDef *pclass, USBH_HandleTypeDef *phost)
 {
     PIPE_EVENT pev;
+
+    if (osMessageQueueGetSpace(pclass->classEventQueue) < 3)
+      return USBH_OK;
 
     pev.channel = 0;
     pev.state = BTEV_SOF_BIT;
@@ -314,6 +315,13 @@ void StartBTDongleTask(void *arg)
   usbh_out_state = USBH_OUT_IDLE;
 
   postGuiEventMessage(GUIEV_ICON_CHANGE, ICON_SET | ICON_USB, NULL, NULL);
+
+    pclass->cState = 1;
+    pclass->phost->PipeEvq[0] = pclass->classEventQueue;
+    pclass->phost->PipeEvq[usb->event_in_pipe & 0x0F] = pclass->classEventQueue;
+    pclass->phost->PipeEvq[usb->acl_in_pipe & 0x0F] = pclass->classEventQueue;
+    pclass->phost->PipeEvq[usb->acl_out_pipe & 0x0F] = pclass->classEventQueue;
+  osThreadNew(StartBtstackTask, NULL, &attributes_btstacktask);
 
   while (1)
   {
@@ -591,8 +599,4 @@ void usbh_bluetooth_send_acl(const uint8_t * packet, uint16_t len){
 
     info = &HciIfInfo;
     osEventFlagsSet(info->dongle_flagId, BTOUT_ACL_BIT);
-}
-
-void usbh_dongle_enable()
-{
 }

@@ -414,7 +414,6 @@ typedef struct _USBH_HandleTypeDef
   USBH_ClassTypeDef    *pActiveClassList;                               /* Active class */
   uint32_t              ClassNumber;
   uint32_t              Pipes[USBH_MAX_NUM_ENDPOINTS];
-  osEventFlagsId_t	PipeFlags[USBH_MAX_NUM_ENDPOINTS];
   osMessageQueueId_t    PipeEvq[USBH_MAX_NUM_ENDPOINTS];
   __IO uint32_t         Timer;
   uint32_t              Timeout;

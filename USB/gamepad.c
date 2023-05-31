@@ -48,19 +48,21 @@ GAMEPAD_INFO *IsSupportedGamePad(uint16_t vid, uint16_t pid)
   return NULL;
 }
 
-void GamepadHidMode(GAMEPAD_INFO *padInfo, int mode_bit)
+const int modemap[3] = {
+ HID_LVGL_BIT, HID_TEST_BIT, HID_DOOM_BIT,
+};
+
+void GamepadHidMode(GAMEPAD_INFO *padInfo, int mode)
 {
+  padInfo->hid_mode = mode;
+
   if (padInfo->pclass)
   {
     PIPE_EVENT pev;
 
     pev.channel = 0;
-    pev.state = mode_bit;
+    pev.state = modemap[mode];
     osMessageQueuePut(padInfo->pclass->classEventQueue, &pev, 0, 0);
-  }
-  else
-  {
-    padInfo->hid_mode = mode_bit;
   }
 }
 
