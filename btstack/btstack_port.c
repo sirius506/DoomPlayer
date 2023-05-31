@@ -7,6 +7,7 @@
 #include "hci_transport.h"
 #include "hci_dump_segger_rtt_stdout.h"
 #include "hci_if.h"
+#include "app_gui.h"
 
 #include "hal_flash_bank_memory.h"
 
@@ -22,6 +23,9 @@ static hal_flash_bank_memory_t hal_flash_bank_context;
 
 #define	STORAGE_SIZE	(1024*8)
 SECTION_SRDSRAM static uint8_t tlvStorage_p[STORAGE_SIZE];
+
+extern void process_btapi_request();
+extern int btstack_main(int argc, const char * argv[]);
 
 #include "hal_time_ms.h"
 uint32_t hal_time_ms(void)
@@ -142,7 +146,6 @@ void transport_set_send_now(int val)
  * open transport connection
  */
 static int transport_open(void){
-    usbh_dongle_enable();
     return 0;
 }
 

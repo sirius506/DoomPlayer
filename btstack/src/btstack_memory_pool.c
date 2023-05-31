@@ -48,6 +48,7 @@
 
 #include "btstack_memory_pool.h"
 
+#include "main.h"
 #include <stddef.h>
 #include "btstack_debug.h"
 

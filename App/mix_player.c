@@ -464,7 +464,7 @@ static void StartMixPlayerTask(void *args)
 
       if (pflac)
       {
-     
+        /* Read two frames of music data into MusicFrameBuffer. */
         num_read = drflac_read_pcm_frames_s16(pflac, NUM_FRAMES * BUF_FACTOR, (drflac_int16 *)MusicFrameBuffer);
         if (num_read > 0)
         {
@@ -496,14 +496,22 @@ static void StartMixPlayerTask(void *args)
       switch (mixInfo->state)
       {
       case MIX_ST_PLAY_REQ:
+         /* In this state, MusicFrameBuffer has been completely filled up. */
         if (ctrl.option == 0)
         {
+          /* First half of output buffer has became available.
+           * Fill that space with music and sound data.
+           */
           pDriver->MixSound(audio_config, pmusic, NUM_FRAMES);
           mixInfo->state = MIX_ST_PLAY;
           mixInfo->ppos += BUF_FRAMES / 2;
         }
         else
         {
+          /* Latter half of output buffer has drained.
+           * Send silient data to the buffer and wait for first half buffer space
+           * becames available.
+           */
           pDriver->MixSound(audio_config, SilentBuffer, NUM_FRAMES);
         }
         break;
@@ -511,6 +519,7 @@ static void StartMixPlayerTask(void *args)
         mixInfo->ppos += BUF_FRAMES/2;
         if (ctrl.option == 0)
         {
+          /* If we need to loop back, seek to start position. */
           if ((flacInfo->loop_count != 0) && (flacInfo->pcm_pos >= flacInfo->loop_end))
           {
             flacInfo->pcm_pos = flacInfo->loop_start;
@@ -524,7 +533,8 @@ static void StartMixPlayerTask(void *args)
 #ifdef MIX_DEBUG
 debug_printf("mix2: pmusic = %x\n", pmusic);
 #endif
-        num_read = drflac_read_pcm_frames_s16(pflac, BUF_FRAMES/2, (drflac_int16 *)pmusic);
+        /* Read next music data into free space. */
+        num_read = drflac_read_pcm_frames_s16(pflac, NUM_FRAMES, (drflac_int16 *)pmusic);
 #ifdef MIX_DEBUG
 debug_printf("num_read = %d\n", num_read);
 #endif
@@ -532,7 +542,10 @@ debug_printf("num_read = %d\n", num_read);
         {
           flacInfo->pcm_pos += num_read;
           pmusic += num_read;
-          while (num_read < BUF_FRAMES/2)
+          /* If read data amount is less than NUM_FRAMES,
+           * fill with silent data.
+           */
+          while (num_read < NUM_FRAMES)
           {
             pmusic->ch0 = 0;
             pmusic->ch1 = 0;
@@ -543,8 +556,8 @@ debug_printf("num_read = %d\n", num_read);
           {
             pmusic = MusicFrameBuffer;
             if (ctrl.option)
-              pmusic += BUF_FRAMES/2;
-            if (process_fft(fftInfo, pmusic, BUF_FRAMES/2))
+              pmusic += NUM_FRAMES;
+            if (process_fft(fftInfo, pmusic, NUM_FRAMES))
             {
               guiev.evcode = GUIEV_FFT_UPDATE;
               guiev.evval0 = fft_count;
@@ -578,7 +591,7 @@ debug_printf("num_read = %d\n", num_read);
         }
         pmusic = MusicFrameBuffer;
         if (ctrl.option)
-          pmusic += BUF_FRAMES/2;
+          pmusic += NUM_FRAMES;
         pDriver->MixSound(audio_config, pmusic, NUM_FRAMES);
 #ifdef MIX_DEBUG
 debug_printf("Mix2 (%d), %d @ %d\n", ctrl.option, mixInfo->ppos, flacInfo->pcm_pos);
@@ -589,7 +602,7 @@ debug_printf("Mix2 (%d), %d @ %d\n", ctrl.option, mixInfo->ppos, flacInfo->pcm_p
         {
           if (argval & MIXER_FFT_ENABLE)
           {
-            if (process_fft(fftInfo, (AUDIO_STEREO *)SilentBuffer, BUF_FRAMES/2))
+            if (process_fft(fftInfo, (AUDIO_STEREO *)SilentBuffer, NUM_FRAMES))
             {
               guiev.evcode = GUIEV_FFT_UPDATE;
               guiev.evval0 = fft_count;

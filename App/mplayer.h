@@ -10,12 +10,9 @@
 #define	EVF_SOF		(1<<10)
 #define	EVF_VOLUME	(1<<11)
 
-//#define	BUF_MSEC	12	/* Hold 6ms worth PCM samples in one frame */
-//#define	NUM_FRAMES	576	/* 4ms worth PCM samples (48 * 12 = 576) */
 #define	BUF_MSEC	10	/* Hold 10ms worth PCM samples in one frame */
 #define	NUM_FRAMES	480	/* 10ms worth PCM samples (48 * 19 = 480) */
-#define	BUF_FACTOR	2
-#define	BUF_FACTOR_H	(BUF_FACTOR/2)
+#define	BUF_FACTOR	2	/* Two for double buffering */
 #define	BUF_FRAMES	(NUM_FRAMES*BUF_FACTOR)
 
 #define	DECIMATION_FACTOR	3
