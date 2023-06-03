@@ -64,6 +64,8 @@ static int mixer_freq;
 #if 0
 static uint16_t mixer_format;
 static int mixer_channels;
+#else
+extern int Mix_QueryFreq();
 #endif
 static boolean use_sfx_prefix;
 static boolean (*ExpandSoundData)(sfxinfo_t *sfxinfo,
@@ -1109,7 +1111,7 @@ static boolean I_SDL_InitSound(boolean _use_sfx_prefix)
 #if 0
     Mix_QuerySpec(&mixer_freq, &mixer_format, &mixer_channels);
 #else
-    mixer_freq = 44100;
+    mixer_freq = Mix_QueryFreq();
 #endif
 
 #ifdef HAVE_LIBSAMPLERATE

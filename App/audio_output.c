@@ -26,11 +26,16 @@ static void usb_output_init(AUDIO_CONF *audio_conf)
   if (audio_conf->numChan == 4)
     pDriver->sound_buffer_size = BUF_FRAMES * sizeof(AUDIO_4CH);
   else
-    pDriver->sound_buffer_size = BUF_FRAMES * sizeof(AUDIO_STEREO);
+  {
+    if (audio_conf->playRate == 32000)
+      pDriver->sound_buffer_size = NUM_32KFRAMES * 2 * sizeof(AUDIO_STEREO);
+    else
+      pDriver->sound_buffer_size = BUF_FRAMES * sizeof(AUDIO_STEREO);
+  }
 
   pDriver->freebuffer_ptr = pDriver->sound_buffer;
   pDriver->playbuffer_ptr = pDriver->sound_buffer;
-  pDriver->play_index = (audio_conf->playRate == 48000)? BUF_MSEC : BUF_MSEC*3/2;
+  pDriver->play_index = BUF_MSEC;
   memset(pDriver->sound_buffer, 0, pDriver->sound_buffer_size);
 }
 
@@ -202,16 +207,16 @@ static void usb_mix_sound(AUDIO_CONF *audio_conf, const AUDIO_STEREO *psrc, int 
 
   if (audio_conf->numChan == 4)
   {
+    /* DualSense has four channels output. */
     usb_mix_sound4ch(audio_conf, psrc, num_frame);
     return;
   }
-
 
   osMutexAcquire(pDriver->soundLockId, osWaitForever);
 
   pdst = (AUDIO_STEREO *)(pDriver->freebuffer_ptr);
 
-  for (i = 0; i < NUM_FRAMES; i++)
+  for (i = 0; i < num_frame; i++)
   {
       chanInfo = ChanInfo;
 
@@ -245,7 +250,7 @@ static void usb_mix_sound(AUDIO_CONF *audio_conf, const AUDIO_STEREO *psrc, int 
       pdst++;
   }
 
-  pDriver->freebuffer_ptr += NUM_FRAMES * sizeof(AUDIO_STEREO);
+  pDriver->freebuffer_ptr += num_frame * sizeof(AUDIO_STEREO);
   if (pDriver->freebuffer_ptr >= pDriver->sound_buffer + pDriver->sound_buffer_size)
       pDriver->freebuffer_ptr = pDriver->sound_buffer;
   osMutexRelease(pDriver->soundLockId);

@@ -379,7 +379,7 @@ void StartAUDIOTask(void *arg)
       msec_frames = AUDIO_Handle->headphone.frame_length;
       max_msec = NUM_FRAMES * 1000 / AUDIO_Handle->sampleFreq;
 debug_printf("msec_frames = %d\n", msec_frames);
-debug_printf("freq = %d --> %d\n", AUDIO_Handle->sampleFreq, max_msec);
+debug_printf("usb freq = %d --> %d\n", AUDIO_Handle->sampleFreq, max_msec);
       AUDIO_Handle->play_state = AUDIO_PLAYBACK_PLAY;
       pclass->cState = 2;
       UngrabUrb(phost);

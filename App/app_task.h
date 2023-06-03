@@ -153,4 +153,5 @@ extern void btapi_send_report(uint8_t *ptr, int len);
 extern void btapi_push_report();
 extern void btapi_start_scan();
 extern void btapi_disconnect();
+extern AUDIO_CONF *get_audio_conf();
 #endif

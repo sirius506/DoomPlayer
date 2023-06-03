@@ -37,5 +37,5 @@ typedef struct {
 
 
 extern void app_sound_end();
-void sound_screen_create(lv_obj_t *parent, lv_group_t *ing, lv_style_t *btn_style);
+lv_obj_t *sound_screen_create(lv_obj_t *parent, lv_group_t *ing, lv_style_t *btn_style);
 #endif

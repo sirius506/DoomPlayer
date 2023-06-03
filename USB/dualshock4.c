@@ -44,7 +44,7 @@ const AUDIO_CONF DualShockUsbAudio = {
   .mix_mode = MIXER_USB_OUTPUT|MIXER_FFT_ENABLE,
   .playRate = 32000,
   .numChan = 2,
-  .msec_fsize = 128,
+  .pseudoRate = 48000,
   .pDriver = &usb_output_driver,
 };
 

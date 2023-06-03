@@ -75,6 +75,7 @@ add_executable(DoomPlayer.elf
   App/doom_helper.c
   App/sdl_joystick.c
   App/sdl_helper.c
+  App/src32k.c
   App/assets/Doom1_icon.c
   App/assets/dualsense2.c
   App/assets/img_lv_demo_music_icon_1.c

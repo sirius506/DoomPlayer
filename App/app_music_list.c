@@ -469,8 +469,8 @@ lv_obj_t *music_player_create(AUDIO_CONF *audio_config, lv_group_t *g, lv_style_
 
   LoadMusicConfigs();
 
-  play_frequency = audio_config->playRate;
-debug_printf("freq = %d\n", play_frequency);
+  play_frequency = audio_config->pseudoRate;
+debug_printf("play freq = %d\n", play_frequency);
 
   dirent = dirInfo->fs_direntry;
   dh  = (IWAD_HEADER *)(QSPI_ADDR + dirent->foffset);

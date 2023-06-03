@@ -59,7 +59,7 @@ typedef struct s_audio_conf {
   uint16_t mix_mode;
   uint16_t playRate;
   uint16_t numChan;
-  uint16_t msec_fsize;
+  uint16_t pseudoRate;
   AUDIO_OUTPUT_DRIVER *pDriver;
 } AUDIO_CONF;
 

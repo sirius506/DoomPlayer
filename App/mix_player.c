@@ -19,11 +19,17 @@
 
 #include "dr_flac.h"
 #include "audio_output.h"
+#include "src32k.h"
 
 #define PLAYER_STACK_SIZE  1400
 
 TASK_DEF(mixplayer, PLAYER_STACK_SIZE, osPriorityAboveNormal)
 
+/*
+ * Buffers to store music source data.
+ * FLAC music data is read into MusicFrameBuffer.
+ * SilentBuffer is used to generate silience.
+ */
 static SECTION_AUDIOSRAM AUDIO_STEREO MusicFrameBuffer[BUF_FRAMES];
 static const AUDIO_STEREO SilentBuffer[BUF_FRAMES/2];
 
@@ -328,7 +334,7 @@ static int process_fft(FFTINFO *fftInfo, AUDIO_STEREO *pmusic, int frames)
   arm_q15_to_float(sInBuffer, sFloatBuffer, frames);
   arm_fir_decimate_f32(&decimate_instance, sFloatBuffer, fftInfo->putptr, frames);
 
-  fftInfo->putptr += (frames/DECIMATION_FACTOR);
+  fftInfo->putptr += (frames/FFT_DECIMATION_FACTOR);
   if (fftInfo->putptr >= &audio_buffer[AUDIO_SAMPLES])
   {
     fftInfo->putptr = audio_buffer;
@@ -402,6 +408,7 @@ static void StartMixPlayerTask(void *args)
   int argval;
   uint32_t psec;
   AUDIO_CONF *audio_config;
+  int mix_frames;
 
   debug_printf("Player Started..\n");
 
@@ -414,7 +421,7 @@ static void StartMixPlayerTask(void *args)
 
   fftInfo = &FftInfo;
   fft_count = 0;
-  arm_fir_decimate_init_f32(&decimate_instance, NUMTAPS, DECIMATION_FACTOR, (float32_t *)Coeffs, DeciStateBuffer, BUF_FRAMES/2);
+  arm_fir_decimate_init_f32(&decimate_instance, NUMTAPS, FFT_DECIMATION_FACTOR, (float32_t *)Coeffs, DeciStateBuffer, BUF_FRAMES/2);
 
   allocationCallbacks.pUserData = flacInfo;
   allocationCallbacks.onMalloc = my_malloc;
@@ -422,7 +429,17 @@ static void StartMixPlayerTask(void *args)
   allocationCallbacks.onFree = my_free;
 
   pDriver = (AUDIO_OUTPUT_DRIVER *)audio_config->pDriver;
-  mixInfo->rate = audio_config->playRate;
+  if (audio_config->playRate == 32000)
+  {
+    src32k_init();
+    mix_frames = NUM_32KFRAMES;
+  }
+  else
+  {
+    mix_frames = NUM_FRAMES;
+  }
+  debug_printf("mix_frames = %d\n", mix_frames);
+  mixInfo->rate = audio_config->pseudoRate;
 
   pDriver->Init(audio_config);
   soundLockId = pDriver->soundLockId = osMutexNew(&attributes_sound_lock);
@@ -483,6 +500,12 @@ static void StartMixPlayerTask(void *args)
             }
           }
           mixInfo->state = MIX_ST_PLAY_REQ;
+
+          if (audio_config->playRate == 32000)
+          {
+            /* For 32K audio (DUALSHOCK), convert music data to 32K sampling. */
+            src32k_process(MusicFrameBuffer, NUM_FRAMES * 2);
+          }
         }
       }
       else
@@ -502,9 +525,9 @@ static void StartMixPlayerTask(void *args)
           /* First half of output buffer has became available.
            * Fill that space with music and sound data.
            */
-          pDriver->MixSound(audio_config, pmusic, NUM_FRAMES);
+          pDriver->MixSound(audio_config, pmusic, mix_frames);
           mixInfo->state = MIX_ST_PLAY;
-          mixInfo->ppos += BUF_FRAMES / 2;
+          mixInfo->ppos += NUM_FRAMES;
         }
         else
         {
@@ -512,11 +535,11 @@ static void StartMixPlayerTask(void *args)
            * Send silient data to the buffer and wait for first half buffer space
            * becames available.
            */
-          pDriver->MixSound(audio_config, SilentBuffer, NUM_FRAMES);
+          pDriver->MixSound(audio_config, SilentBuffer, mix_frames);
         }
         break;
       case MIX_ST_PLAY:
-        mixInfo->ppos += BUF_FRAMES/2;
+        mixInfo->ppos += NUM_FRAMES;
         if (ctrl.option == 0)
         {
           /* If we need to loop back, seek to start position. */
@@ -528,7 +551,7 @@ static void StartMixPlayerTask(void *args)
         }
         else
         {
-          pmusic += BUF_FRAMES / 2;
+          pmusic += NUM_FRAMES;
         }
 #ifdef MIX_DEBUG
 debug_printf("mix2: pmusic = %x\n", pmusic);
@@ -565,6 +588,11 @@ debug_printf("num_read = %d\n", num_read);
               fft_count++;
             }
           }
+          if (audio_config->playRate == 32000)
+          {
+            /* For 32K audio (DUALSHOCK), convert music data to 32K sampling. */
+            src32k_process((ctrl.option == 0)?  MusicFrameBuffer : MusicFrameBuffer + NUM_FRAMES, NUM_FRAMES);
+          }
         }
         else
         {
@@ -592,7 +620,7 @@ debug_printf("num_read = %d\n", num_read);
         pmusic = MusicFrameBuffer;
         if (ctrl.option)
           pmusic += NUM_FRAMES;
-        pDriver->MixSound(audio_config, pmusic, NUM_FRAMES);
+        pDriver->MixSound(audio_config, pmusic, mix_frames);
 #ifdef MIX_DEBUG
 debug_printf("Mix2 (%d), %d @ %d\n", ctrl.option, mixInfo->ppos, flacInfo->pcm_pos);
 #endif
@@ -617,13 +645,13 @@ debug_printf("Mix2 (%d), %d @ %d\n", ctrl.option, mixInfo->ppos, flacInfo->pcm_p
                fftInfo->samples = 0;
           }
         }
-        pDriver->MixSound(audio_config, SilentBuffer, NUM_FRAMES);
+        pDriver->MixSound(audio_config, SilentBuffer, mix_frames);
         break;
       default:
         debug_printf("st = %d\n", mixInfo->state);
         break;
       }
-      psec = mixInfo->ppos / mixInfo->rate;
+      psec = mixInfo->ppos / audio_config->pseudoRate;
       if (psec > mixInfo->psec)
       {
         mixInfo->psec = psec;
@@ -844,12 +872,16 @@ int Mix_PlayChannel(int channel, Mix_Chunk *chunk, int loops)
 int Mix_PlayPosition(int channel)
 {
   Mix_Chunk *chunk;
+  AUDIO_CONF *aconf = get_audio_conf();
   int pos;
 
   osMutexAcquire(soundLockId, osWaitForever);
   chunk = ChanInfo[channel].chunk;
   pos = ChanInfo[channel].pread - (AUDIO_STEREO *)chunk->abuf;
   osMutexRelease(soundLockId);
+
+  if (aconf->playRate == 32000)
+    pos = pos * 3 / 2;
   return pos;
 }
 
@@ -968,4 +1000,12 @@ void mix_request_data(int full)
   st = osMessageQueuePut(MixInfo.mixevqId, &evcode, 0, 0);
   if (st != osOK)
     debug_printf("request failed (%d)\n", st);
+}
+
+int Mix_QueryFreq()
+{
+  AUDIO_CONF *aconf;
+
+  aconf = get_audio_conf();
+  return aconf->playRate;
 }

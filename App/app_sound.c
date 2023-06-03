@@ -11,6 +11,7 @@
 #include "app_sound.h"
 #include "arm_math.h"
 #include "app_gui.h"
+#include "src32k.h"
 
 SECTION_DTCMRAM static CHART_INFO ChartInfo;
 static Mix_Chunk sound_chunk;
@@ -344,11 +345,11 @@ static void sound_quit(lv_event_t *e)
 /**
  * Create Sound Player screen
  */
-void sound_screen_create(lv_obj_t *parent, lv_group_t *ing, lv_style_t *btn_style)
+lv_obj_t *sound_screen_create(lv_obj_t *parent, lv_group_t *ing, lv_style_t *btn_style)
 {
   QSPI_DIRHEADER *dirInfo = (QSPI_DIRHEADER *)QSPI_ADDR;
   FS_DIRENT *dirent;
-  lv_obj_t *label, *btn_home;
+  lv_obj_t *label, *btn_home, *slist;
 
   dirent = dirInfo->fs_direntry;
 
@@ -363,7 +364,7 @@ void sound_screen_create(lv_obj_t *parent, lv_group_t *ing, lv_style_t *btn_styl
 
   lv_obj_clear_flag(parent, LV_OBJ_FLAG_SCROLLABLE);
 
-  sound_list_create(parent, lh, dh->numlumps, dhpos, ing);
+  slist = sound_list_create(parent, lh, dh->numlumps, dhpos, ing);
 
   /* Add home button */
 
@@ -387,10 +388,11 @@ void sound_screen_create(lv_obj_t *parent, lv_group_t *ing, lv_style_t *btn_styl
   lv_group_add_obj(ing, btn_home);
 
   lv_timer_pause(cursor_timer);
+  return slist;
 }
 
 #define	NUMTAPS	28
-#define	BLSIZE	100
+#define	BLSIZE	120
 
 static arm_fir_interpolate_instance_q15 FirInstance;
 static q15_t FirState[NUMTAPS/2+BLSIZE];
@@ -451,20 +453,30 @@ static void app_pcm_set(SOUND_DATA *sdp)
 
   /*
    * WAD PCM data is sampled at 11.025K or 22.06KHz.
-   * Convert it to 44.1K sampling stereo data.
+   * Convert it to 44.1K (or 32K) sampling stereo data.
    */
   pCoeffs = (sdp->factor == 2)? Coeffs2 : Coeffs4;
   arm_fir_interpolate_init_q15(&FirInstance, sdp->factor, NUMTAPS, (q15_t *)pCoeffs, FirState, BLSIZE);
 
   int len, olen;
+  int tolen;
   AUDIO_STEREO *pAudio = (AUDIO_STEREO *)sound_chunk.abuf;
+  AUDIO_CONF *aconf = get_audio_conf();
 
+  tolen = 0;
   for (len = sdp->length; len > 0; len -= nb)
   {
     nb = (len > BLSIZE)? BLSIZE : len;
     olen = nb * sdp->factor;
     arm_fir_interpolate_q15(&FirInstance, wp, interp_buffer, nb);
 
+    if (aconf->playRate == 32000)
+    {
+      /* If audio device is 32KHz sampling, need additional convertion,
+       * and result PCM length becomes shorter.
+       */
+      olen = src32k_pcm_mono(interp_buffer, olen);
+    }
     dp = interp_buffer;
 
     /* Convert to stereo data */
@@ -476,8 +488,17 @@ static void app_pcm_set(SOUND_DATA *sdp)
       dp++;
     }
     wp += nb;
+    tolen += olen * 2;
   }
   free(stb);
+
+  if (aconf->playRate == 32000)
+  {
+#if 0
+    debug_printf("alen: %d --> %d\n", sound_chunk.alen, tolen * 2);
+#endif
+    sound_chunk.alen = tolen * 2;
+  }
   Mix_LoadChannel(0, &sound_chunk, 1);
 }
 

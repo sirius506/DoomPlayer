@@ -66,7 +66,7 @@ static AUDIO_CONF I2S_Audio_Conf = {
   .mix_mode = MIXER_I2S_OUTPUT|MIXER_FFT_ENABLE,
   .playRate = 44100,
   .numChan = 2,
-  .msec_fsize = 177,
+  .pseudoRate = 44100,
   .pDriver = &i2s_output_driver,
 };
 
@@ -563,6 +563,7 @@ void StartLvglTask(void *argument)
   char sbuff[70];
   lv_obj_t *label;
   lv_obj_t *tlabel;
+  lv_obj_t *sound_list;
   WADLIST *wadlist;
   WADPROP *flash_game;
   WADPROP *sel_flash_game;
@@ -701,6 +702,7 @@ void StartLvglTask(void *argument)
   flash_game = NULL;
   sel_sd_game = NULL;
   menus->sub_scr = NULL;
+  sound_list = NULL;
 
   postMainRequest(REQ_VERIFY_SD, NULL, 0);	// Start SD card verification
 
@@ -904,7 +906,7 @@ void StartLvglTask(void *argument)
         lv_label_set_text(menus->title, sel_flash_game->title);
 
         sounds->ing = lv_group_create();
-        sound_screen_create(sounds->screen, sounds->ing, &style_menubtn);
+        //sound_screen_create(sounds->screen, sounds->ing, &style_menubtn);
 
         menus->ing = lv_group_create();
         lv_indev_set_group(keypad_dev, menus->ing);
@@ -1084,6 +1086,10 @@ void StartLvglTask(void *argument)
         break;
       case GUIEV_SPLAYER_START:
         Start_SDLMixer(current_audio_conf);
+        if (sound_list == NULL)
+        {
+          sound_list = sound_screen_create(sounds->screen, sounds->ing, &style_menubtn);
+        }
         lv_obj_add_flag(menus->cont_audio, LV_OBJ_FLAG_HIDDEN);
         lv_scr_load(sounds->screen);
         lv_indev_set_group(keypad_dev, sounds->ing);

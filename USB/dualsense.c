@@ -53,7 +53,7 @@ const AUDIO_CONF DualSenseUsbAudio = {
   .mix_mode = MIXER_USB_OUTPUT|MIXER_FFT_ENABLE,
   .playRate = 48000,
   .numChan = 4,
-  .msec_fsize = 384,
+  .pseudoRate = 48000,
   .pDriver = &usb_output_driver,
 };
 
