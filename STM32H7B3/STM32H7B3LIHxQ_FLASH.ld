@@ -102,6 +102,7 @@ SECTIONS
     *usbh_audio.c.obj (.text .text*)
     *usbh_hid.c.obj (.text .text*)
     *usbh_hid_dualsense.c.obj (.text .text*)
+    *usbh_bluetooth.c.obj (.text .text*)
 
     _eITCM = .;
   } > ITCMRAM AT> FLASH
