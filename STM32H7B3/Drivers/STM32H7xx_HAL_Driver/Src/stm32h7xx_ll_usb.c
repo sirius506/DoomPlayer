@@ -1673,23 +1673,12 @@ HAL_StatusTypeDef USB_HC_Init(USB_OTG_GlobalTypeDef *USBx, uint8_t ch_num,
   {
     case EP_TYPE_CTRL:
     case EP_TYPE_BULK:
-#define ORG_CODE
-#ifdef ORG_CODE
       USBx_HC((uint32_t)ch_num)->HCINTMSK = USB_OTG_HCINTMSK_XFRCM  |
                                             USB_OTG_HCINTMSK_STALLM |
                                             USB_OTG_HCINTMSK_TXERRM |
                                             USB_OTG_HCINTMSK_DTERRM |
                                             USB_OTG_HCINTMSK_AHBERR |
                                             USB_OTG_HCINTMSK_NAKM;
-#else
-      USBx_HC((uint32_t)ch_num)->HCINTMSK = USB_OTG_HCINTMSK_XFRCM  |
-                                            USB_OTG_HCINTMSK_STALLM |
-                                            USB_OTG_HCINTMSK_TXERRM |
-                                            USB_OTG_HCINTMSK_DTERRM |
-                                            USB_OTG_HCINTMSK_AHBERR;
-      if (ep_type == EP_TYPE_CTRL)
-        USBx_HC((uint32_t)ch_num)->HCINTMSK |= USB_OTG_HCINTMSK_NAKM;
-#endif
 
       if ((epnum & 0x80U) == 0x80U)
       {

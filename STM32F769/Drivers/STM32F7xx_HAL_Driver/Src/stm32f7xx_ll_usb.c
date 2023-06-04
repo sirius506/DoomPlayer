@@ -1864,9 +1864,8 @@ HAL_StatusTypeDef USB_HC_Init(USB_OTG_GlobalTypeDef *USBx, uint8_t ch_num,
                                             USB_OTG_HCINTMSK_STALLM |
                                             USB_OTG_HCINTMSK_TXERRM |
                                             USB_OTG_HCINTMSK_DTERRM |
-                                            USB_OTG_HCINTMSK_AHBERR;
-      if (ep_type == EP_TYPE_CTRL)
-        USBx_HC((uint32_t)ch_num)->HCINTMSK |= USB_OTG_HCINTMSK_NAKM;
+                                            USB_OTG_HCINTMSK_AHBERR |
+                                            USB_OTG_HCINTMSK_NAKM;
 
       if ((epnum & 0x80U) == 0x80U)
       {
