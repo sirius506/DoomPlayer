@@ -757,10 +757,17 @@ void StartLvglTask(void *argument)
         }
         break;
       case GUIEV_USB_AUDIO_READY:
-        usb_audio_conf = (AUDIO_CONF *)event.evarg1;
-        lv_obj_clear_flag(menus->cont_audio, LV_OBJ_FLAG_HIDDEN);	// Make audio selection visible
-        if (menus->btn_dual)
-          lv_obj_clear_state(menus->btn_dual, LV_STATE_DISABLED);
+        if (Mix_Started() == 0)
+        {
+          /*
+           * Audio playback task is not running, yet.
+           * Make audio selection visible.
+           */
+          usb_audio_conf = (AUDIO_CONF *)event.evarg1;
+          lv_obj_clear_flag(menus->cont_audio, LV_OBJ_FLAG_HIDDEN);
+          if (menus->btn_dual)
+            lv_obj_clear_state(menus->btn_dual, LV_STATE_DISABLED);
+        }
         break;
       case GUIEV_MUSIC_FINISH:
         _lv_demo_inter_pause_start();
