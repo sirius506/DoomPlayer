@@ -32,6 +32,10 @@
 .global  g_pfnVectors
 .global  Default_Handler
 
+.word  _sITCM
+.word  _eITCM
+.word  _siITCM
+
 /* start address for the initialization values of the .data section. 
 defined in linker script */
 .word  _sidata
@@ -103,6 +107,23 @@ FillZeroDTCM:
   adds r2, r2, #4
   cmp  r2, r4
   bcc  FillZeroDTCM
+
+/* Copy ITCM code */
+  ldr r0, =_sITCM
+  ldr r1, =_eITCM
+  ldr r2, =_siITCM
+  movs r3, #0
+  b LoopCopyITCM 
+
+CopyITCM:
+  ldr r4, [r2, r3]
+  str r4, [r0, r3]
+  adds r3, r3, #4
+    
+LoopCopyITCM:
+  adds r4, r0, r3
+  cmp r4, r1
+  bcc CopyITCM
 
 /* Call static constructors */
     bl __libc_init_array

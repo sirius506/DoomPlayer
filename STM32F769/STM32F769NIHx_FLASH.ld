@@ -56,11 +56,12 @@ ENTRY(Reset_Handler)
 _estack = ORIGIN(RAM) + LENGTH(RAM);    /* end of RAM */
 /* Generate a link error if heap and stack don't fit into RAM */
 _Min_Heap_Size = 0x400;      /* required amount of heap  */
-_Min_Stack_Size = 0x500; /* required amount of stack */
+_Min_Stack_Size = 0x800; /* required amount of stack */
 
 /* Specify the memory areas */
 MEMORY
 {
+ITCMRAM (xrw)  : ORIGIN = 0x00000000, LENGTH = 16K
 DTCMRAM (xrw)  : ORIGIN = 0x20000000, LENGTH = 128K
 RAM (xrw)      : ORIGIN = 0x20020000, LENGTH = 384K	/* 384K */
 FLASH (rx)     : ORIGIN = 0x08000000, LENGTH = 2048K
@@ -78,6 +79,26 @@ SECTIONS
     KEEP(*(.isr_vector)) /* Startup code */
     . = ALIGN(4);
   } >FLASH
+
+    _siITCM = LOADADDR(.ITCMSection);
+
+  .ITCMSection : {
+    . = ALIGN(4);
+    _sITCM = .;
+
+    *stm32f7xx_it.c.obj (.text .text*)
+    *stm32f7xx_ll_usb.c.obj (.text .text*)
+    *audio_output.c.obj (.text .text*)
+
+    *usbh_conf.c.obj (.text .text*)
+    *usbh_core.c.obj (.text .text*)
+    *usbh_ioreq.c.obj (.text .text*)
+    *usbh_pipes.c.obj (.text .text*)
+    *usbh_hid.c.obj (.text .text*)
+    *usbh_bluetooth.c.obj (.text .text*)
+
+    _eITCM = .;
+  } > ITCMRAM AT> FLASH
 
   /* The program code and other data goes into FLASH */
   .text :
