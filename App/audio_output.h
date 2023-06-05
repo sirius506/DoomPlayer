@@ -24,7 +24,6 @@ typedef enum {
 typedef struct {
   mix_state state;
   osMessageQueueId_t mixevqId;
-  uint32_t  rate;
   uint32_t  ppos;		// Current play position in samples
   uint16_t  psec;		// Current play position in seconds
   uint16_t  idle_count;
@@ -43,28 +42,29 @@ typedef struct {
   void    (*Start)(struct s_audio_conf *audio_conf);
   void    (*Stop)(struct s_audio_conf *audio_conf);
   void    (*MixSound)(struct s_audio_conf *audio_conf, const AUDIO_STEREO *psrc, int num_frame);
-#ifdef XXX
-  void    (*SendSound)(struct s_audio_output_driver *pdriver, int foffset, const AUDIO_STEREO *psrc);
-#endif
   void    (*SetVolume)(int vol);
-  uint8_t *sound_buffer;
-  int     sound_buffer_size;
-  uint8_t         *freebuffer_ptr;
-  uint8_t         *playbuffer_ptr;
-  uint8_t         play_index;		// msec position in one buffer
-  osMutexId_t soundLockId;
 } AUDIO_OUTPUT_DRIVER;
 
-typedef struct s_audio_conf {
+typedef struct {
   uint16_t mix_mode;
   uint16_t playRate;
   uint16_t numChan;
   uint16_t pseudoRate;
-  AUDIO_OUTPUT_DRIVER *pDriver;
+  const AUDIO_OUTPUT_DRIVER *pDriver;
+} AUDIO_DEVCONF;
+
+typedef struct s_audio_conf {
+  const AUDIO_DEVCONF   *devconf;
+  uint8_t         *sound_buffer;
+  int             sound_buffer_size;
+  uint8_t         *freebuffer_ptr;
+  uint8_t         *playbuffer_ptr;
+  uint8_t         play_index;		// msec position in one buffer
+  osMutexId_t     soundLockId;
 } AUDIO_CONF;
 
 extern MIX_INFO MixInfo;
 
-extern AUDIO_OUTPUT_DRIVER usb_output_driver;
-extern AUDIO_OUTPUT_DRIVER i2s_output_driver;
+extern const AUDIO_OUTPUT_DRIVER usb_output_driver;
+extern const AUDIO_OUTPUT_DRIVER i2s_output_driver;
 #endif

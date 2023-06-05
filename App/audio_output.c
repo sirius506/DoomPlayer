@@ -8,6 +8,8 @@
 #include "audio_output.h"
 #include "usbh_audio.h"
 
+extern void UsbAudio_Output_Start(AUDIO_CONF *audio_conf);
+
 /*
  * Mixered sounds data is stored into FinalSoundBuffer,
  * that has 4ch space for DualSense.
@@ -20,23 +22,21 @@ static SECTION_AUDIOBUFF AUDIO_4CH FinalSoundBuffer[BUF_FRAMES];
  */
 static void usb_output_init(AUDIO_CONF *audio_conf)
 {
-  AUDIO_OUTPUT_DRIVER *pDriver = audio_conf->pDriver;
-
-  pDriver->sound_buffer = (uint8_t *)FinalSoundBuffer;
-  if (audio_conf->numChan == 4)
-    pDriver->sound_buffer_size = BUF_FRAMES * sizeof(AUDIO_4CH);
+  audio_conf->sound_buffer = (uint8_t *)FinalSoundBuffer;
+  if (audio_conf->devconf->numChan == 4)
+    audio_conf->sound_buffer_size = BUF_FRAMES * sizeof(AUDIO_4CH);
   else
   {
-    if (audio_conf->playRate == 32000)
-      pDriver->sound_buffer_size = NUM_32KFRAMES * 2 * sizeof(AUDIO_STEREO);
+    if (audio_conf->devconf->playRate == 32000)
+      audio_conf->sound_buffer_size = NUM_32KFRAMES * 2 * sizeof(AUDIO_STEREO);
     else
-      pDriver->sound_buffer_size = BUF_FRAMES * sizeof(AUDIO_STEREO);
+      audio_conf->sound_buffer_size = BUF_FRAMES * sizeof(AUDIO_STEREO);
   }
 
-  pDriver->freebuffer_ptr = pDriver->sound_buffer;
-  pDriver->playbuffer_ptr = pDriver->sound_buffer;
-  pDriver->play_index = BUF_MSEC;
-  memset(pDriver->sound_buffer, 0, pDriver->sound_buffer_size);
+  audio_conf->freebuffer_ptr = audio_conf->sound_buffer;
+  audio_conf->playbuffer_ptr = audio_conf->sound_buffer;
+  audio_conf->play_index = BUF_MSEC;
+  memset(audio_conf->sound_buffer, 0, audio_conf->sound_buffer_size);
 }
 
 /**
@@ -44,18 +44,16 @@ static void usb_output_init(AUDIO_CONF *audio_conf)
  */
 static void i2s_output_init(AUDIO_CONF *audio_conf)
 {
-  AUDIO_OUTPUT_DRIVER *pDriver = audio_conf->pDriver;
-
   Board_Audio_Init();
 
-  pDriver->sound_buffer = (uint8_t *)FinalSoundBuffer;
-  pDriver->sound_buffer_size = BUF_FRAMES * sizeof(AUDIO_STEREO);
+  audio_conf->sound_buffer = (uint8_t *)FinalSoundBuffer;
+  audio_conf->sound_buffer_size = BUF_FRAMES * sizeof(AUDIO_STEREO);
 
-  pDriver->freebuffer_ptr = pDriver->sound_buffer;
-  pDriver->playbuffer_ptr = pDriver->sound_buffer;
-  pDriver->play_index = BUF_MSEC;
+  audio_conf->freebuffer_ptr = audio_conf->sound_buffer;
+  audio_conf->playbuffer_ptr = audio_conf->sound_buffer;
+  audio_conf->play_index = BUF_MSEC;
 
-  memset(pDriver->sound_buffer, 0, pDriver->sound_buffer_size);
+  memset(audio_conf->sound_buffer, 0, audio_conf->sound_buffer_size);
 }
 
 static void usb_output_start(AUDIO_CONF *audio_conf)
@@ -65,9 +63,7 @@ static void usb_output_start(AUDIO_CONF *audio_conf)
 
 static void i2s_output_start(AUDIO_CONF *audio_conf)
 {
-  AUDIO_OUTPUT_DRIVER *pDriver = audio_conf->pDriver;
-
-  Board_Audio_Output_Start((uint16_t *)pDriver->sound_buffer, pDriver->sound_buffer_size);
+  Board_Audio_Output_Start((uint16_t *)audio_conf->sound_buffer, audio_conf->sound_buffer_size);
 }
 
 static void usb_output_stop(AUDIO_CONF *audio_conf)
@@ -85,10 +81,8 @@ static void i2s_mix_sound(AUDIO_CONF *audio_conf, const AUDIO_STEREO *psrc, int 
   CHANINFO *chanInfo = ChanInfo;
   int sample_left, sample_right;
   AUDIO_STEREO *pdst;
-  AUDIO_OUTPUT_DRIVER *pDriver = audio_conf->pDriver;
-
-  osMutexAcquire(pDriver->soundLockId, osWaitForever);
-  pdst = (AUDIO_STEREO *)(pDriver->freebuffer_ptr);
+  osMutexAcquire(audio_conf->soundLockId, osWaitForever);
+  pdst = (AUDIO_STEREO *)(audio_conf->freebuffer_ptr);
 
   for (i = 0; i < num_frame; i++)
   {
@@ -129,13 +123,13 @@ static void i2s_mix_sound(AUDIO_CONF *audio_conf, const AUDIO_STEREO *psrc, int 
       pdst++;
   }
 
-  SCB_CleanInvalidateDCache_by_Addr((uint32_t *)pDriver->freebuffer_ptr, sizeof(AUDIO_STEREO)*NUM_FRAMES);
+  SCB_CleanInvalidateDCache_by_Addr((uint32_t *)audio_conf->freebuffer_ptr, sizeof(AUDIO_STEREO)*NUM_FRAMES);
 
-  pDriver->freebuffer_ptr += NUM_FRAMES * sizeof(AUDIO_STEREO);
-  if (pDriver->freebuffer_ptr >= pDriver->sound_buffer + pDriver->sound_buffer_size)
-      pDriver->freebuffer_ptr = pDriver->sound_buffer;
+  audio_conf->freebuffer_ptr += NUM_FRAMES * sizeof(AUDIO_STEREO);
+  if (audio_conf->freebuffer_ptr >= audio_conf->sound_buffer + audio_conf->sound_buffer_size)
+      audio_conf->freebuffer_ptr = audio_conf->sound_buffer;
 
-  osMutexRelease(pDriver->soundLockId);
+  osMutexRelease(audio_conf->soundLockId);
 }
 
 
@@ -150,10 +144,8 @@ static void usb_mix_sound4ch(AUDIO_CONF *audio_conf, const AUDIO_STEREO *psrc, i
   CHANINFO *chanInfo = ChanInfo;
   int sample_left, sample_right;
   AUDIO_4CH *pdst;
-  AUDIO_OUTPUT_DRIVER *pDriver = audio_conf->pDriver;
-
-  osMutexAcquire(pDriver->soundLockId, osWaitForever);
-  pdst = (AUDIO_4CH *)(pDriver->freebuffer_ptr);
+  osMutexAcquire(audio_conf->soundLockId, osWaitForever);
+  pdst = (AUDIO_4CH *)(audio_conf->freebuffer_ptr);
 
   for (i = 0; i < num_frame; i++)
   {
@@ -191,10 +183,10 @@ static void usb_mix_sound4ch(AUDIO_CONF *audio_conf, const AUDIO_STEREO *psrc, i
       pdst++;
   }
 
-  pDriver->freebuffer_ptr += NUM_FRAMES * sizeof(AUDIO_4CH);
-  if (pDriver->freebuffer_ptr >= pDriver->sound_buffer + pDriver->sound_buffer_size)
-      pDriver->freebuffer_ptr = pDriver->sound_buffer;
-  osMutexRelease(pDriver->soundLockId);
+  audio_conf->freebuffer_ptr += NUM_FRAMES * sizeof(AUDIO_4CH);
+  if (audio_conf->freebuffer_ptr >= audio_conf->sound_buffer + audio_conf->sound_buffer_size)
+      audio_conf->freebuffer_ptr = audio_conf->sound_buffer;
+  osMutexRelease(audio_conf->soundLockId);
 }
 
 static void usb_mix_sound(AUDIO_CONF *audio_conf, const AUDIO_STEREO *psrc, int num_frame)
@@ -203,18 +195,17 @@ static void usb_mix_sound(AUDIO_CONF *audio_conf, const AUDIO_STEREO *psrc, int 
   CHANINFO *chanInfo = ChanInfo;
   int sample_left, sample_right;
   AUDIO_STEREO *pdst;
-  AUDIO_OUTPUT_DRIVER *pDriver = audio_conf->pDriver;
 
-  if (audio_conf->numChan == 4)
+  if (audio_conf->devconf->numChan == 4)
   {
     /* DualSense has four channels output. */
     usb_mix_sound4ch(audio_conf, psrc, num_frame);
     return;
   }
 
-  osMutexAcquire(pDriver->soundLockId, osWaitForever);
+  osMutexAcquire(audio_conf->soundLockId, osWaitForever);
 
-  pdst = (AUDIO_STEREO *)(pDriver->freebuffer_ptr);
+  pdst = (AUDIO_STEREO *)(audio_conf->freebuffer_ptr);
 
   for (i = 0; i < num_frame; i++)
   {
@@ -250,10 +241,10 @@ static void usb_mix_sound(AUDIO_CONF *audio_conf, const AUDIO_STEREO *psrc, int 
       pdst++;
   }
 
-  pDriver->freebuffer_ptr += num_frame * sizeof(AUDIO_STEREO);
-  if (pDriver->freebuffer_ptr >= pDriver->sound_buffer + pDriver->sound_buffer_size)
-      pDriver->freebuffer_ptr = pDriver->sound_buffer;
-  osMutexRelease(pDriver->soundLockId);
+  audio_conf->freebuffer_ptr += num_frame * sizeof(AUDIO_STEREO);
+  if (audio_conf->freebuffer_ptr >= audio_conf->sound_buffer + audio_conf->sound_buffer_size)
+      audio_conf->freebuffer_ptr = audio_conf->sound_buffer;
+  osMutexRelease(audio_conf->soundLockId);
 }
 
 static void usb_set_volume(int vol)
@@ -261,7 +252,7 @@ static void usb_set_volume(int vol)
   usbAudio_SetVolume(vol);
 }
 
-AUDIO_OUTPUT_DRIVER usb_output_driver = {
+const AUDIO_OUTPUT_DRIVER usb_output_driver = {
   .Init = usb_output_init,
   .Start = usb_output_start,
   .Stop = usb_output_stop,
@@ -269,7 +260,7 @@ AUDIO_OUTPUT_DRIVER usb_output_driver = {
   .SetVolume = usb_set_volume,
 };
 
-AUDIO_OUTPUT_DRIVER i2s_output_driver = {
+const AUDIO_OUTPUT_DRIVER i2s_output_driver = {
   .Init = i2s_output_init,
   .Start = i2s_output_start,
   .Stop = i2s_output_stop,

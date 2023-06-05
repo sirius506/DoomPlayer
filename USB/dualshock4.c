@@ -40,7 +40,7 @@ static const void (*ds4HidProcTable[])(struct ds4_input_report *rp, uint8_t hat,
 
 extern SDL_Joystick *SDL_GetJoystickPtr();
 
-const AUDIO_CONF DualShockUsbAudio = {
+const AUDIO_DEVCONF DualShockUsbAudio = {
   .mix_mode = MIXER_USB_OUTPUT|MIXER_FFT_ENABLE,
   .playRate = 32000,
   .numChan = 2,

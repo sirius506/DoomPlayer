@@ -413,7 +413,7 @@ static void StartMixPlayerTask(void *args)
   debug_printf("Player Started..\n");
 
   audio_config = (AUDIO_CONF *)args;
-  argval = audio_config->mix_mode;
+  argval = audio_config->devconf->mix_mode;
 
   /* Prepare silent sound data. */
   memset((void *)SilentBuffer, 0, sizeof(SilentBuffer));
@@ -428,8 +428,8 @@ static void StartMixPlayerTask(void *args)
   allocationCallbacks.onRealloc = my_realloc;
   allocationCallbacks.onFree = my_free;
 
-  pDriver = (AUDIO_OUTPUT_DRIVER *)audio_config->pDriver;
-  if (audio_config->playRate == 32000)
+  pDriver = (AUDIO_OUTPUT_DRIVER *)audio_config->devconf->pDriver;
+  if (audio_config->devconf->playRate == 32000)
   {
     src32k_init();
     mix_frames = NUM_32KFRAMES;
@@ -439,10 +439,9 @@ static void StartMixPlayerTask(void *args)
     mix_frames = NUM_FRAMES;
   }
   debug_printf("mix_frames = %d\n", mix_frames);
-  mixInfo->rate = audio_config->pseudoRate;
 
   pDriver->Init(audio_config);
-  soundLockId = pDriver->soundLockId = osMutexNew(&attributes_sound_lock);
+  soundLockId = audio_config->soundLockId = osMutexNew(&attributes_sound_lock);
 
   mixInfo->mixevqId = osMessageQueueNew(MIX_EV_DEPTH, sizeof(MIXCONTROL_EVENT), &attributes_mixevq);
 
@@ -501,7 +500,7 @@ static void StartMixPlayerTask(void *args)
           }
           mixInfo->state = MIX_ST_PLAY_REQ;
 
-          if (audio_config->playRate == 32000)
+          if (audio_config->devconf->playRate == 32000)
           {
             /* For 32K audio (DUALSHOCK), convert music data to 32K sampling. */
             src32k_process(MusicFrameBuffer, NUM_FRAMES * 2);
@@ -588,7 +587,7 @@ debug_printf("num_read = %d\n", num_read);
               fft_count++;
             }
           }
-          if (audio_config->playRate == 32000)
+          if (audio_config->devconf->playRate == 32000)
           {
             /* For 32K audio (DUALSHOCK), convert music data to 32K sampling. */
             src32k_process((ctrl.option == 0)?  MusicFrameBuffer : MusicFrameBuffer + NUM_FRAMES, NUM_FRAMES);
@@ -651,7 +650,7 @@ debug_printf("Mix2 (%d), %d @ %d\n", ctrl.option, mixInfo->ppos, flacInfo->pcm_p
         debug_printf("st = %d\n", mixInfo->state);
         break;
       }
-      psec = mixInfo->ppos / audio_config->pseudoRate;
+      psec = mixInfo->ppos / audio_config->devconf->pseudoRate;
       if (psec > mixInfo->psec)
       {
         mixInfo->psec = psec;
@@ -880,7 +879,7 @@ int Mix_PlayPosition(int channel)
   pos = ChanInfo[channel].pread - (AUDIO_STEREO *)chunk->abuf;
   osMutexRelease(soundLockId);
 
-  if (aconf->playRate == 32000)
+  if (aconf->devconf->playRate == 32000)
     pos = pos * 3 / 2;
   return pos;
 }
@@ -1007,5 +1006,5 @@ int Mix_QueryFreq()
   AUDIO_CONF *aconf;
 
   aconf = get_audio_conf();
-  return aconf->playRate;
+  return aconf->devconf->playRate;
 }

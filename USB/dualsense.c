@@ -49,7 +49,7 @@ const void (*HidProcTable[])(struct dualsense_input_report *rp, uint8_t hat, uin
 
 extern SDL_Joystick *SDL_GetJoystickPtr();
 
-const AUDIO_CONF DualSenseUsbAudio = {
+const AUDIO_DEVCONF DualSenseUsbAudio = {
   .mix_mode = MIXER_USB_OUTPUT|MIXER_FFT_ENABLE,
   .playRate = 48000,
   .numChan = 4,

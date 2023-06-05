@@ -126,7 +126,7 @@ extern void CopyFlash(WADLIST *list, uint32_t foffset);
 
 extern lv_obj_t *dualtest_create();
 extern void dualtest_update();
-extern lv_obj_t *music_player_create(AUDIO_CONF *audio_conf, lv_group_t *g, lv_style_t *btn_style, lv_indev_t *keypad_dev);
+extern lv_obj_t *music_player_create(const AUDIO_DEVCONF *audio_devconf, lv_group_t *g, lv_style_t *btn_style, lv_indev_t *keypad_dev);
 extern lv_obj_t * _lv_demo_music_main_create(lv_obj_t * parent, lv_group_t *g, lv_style_t *btn_style);
 
 extern void _lv_demo_inter_pause_start();

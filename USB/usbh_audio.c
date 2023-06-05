@@ -37,6 +37,7 @@
 
 #include "mplayer.h"
 #include "audio_output.h"
+#include "app_task.h"
 
 extern uint8_t  USBH_FindInterfaceIndex(USBH_HandleTypeDef *phost, uint8_t interface_number, uint8_t alt_settings);
 extern uint8_t  USBH_FindInterface(USBH_HandleTypeDef *phost, uint8_t Class, uint8_t SubClass, uint8_t Protocol);
@@ -183,8 +184,6 @@ AUDIO_PlayStateTypeDef get_audio_status(USBH_ClassTypeDef *pclass)
 
 static osMessageQueueId_t  audioEventQueue;
 
-static AUDIO_OUTPUT_DRIVER *usbDriver;
-
 void StartAUDIOTask(void *arg)
 {
   USBH_ClassTypeDef *pclass = (USBH_ClassTypeDef *)arg;
@@ -200,6 +199,7 @@ void StartAUDIOTask(void *arg)
   uint8_t *buff;
   volatile int done_flag = 0;
   PIPE_EVENT pev;
+  AUDIO_CONF *audio_conf;
 
   SEGGER_RTT_printf(0, "AUDIO task started\n");
 
@@ -373,6 +373,9 @@ void StartAUDIOTask(void *arg)
   }
   while (pev.state != EVF_START);
 
+  audio_conf = get_audio_conf();
+debug_printf("audio_conf = %x\n", audio_conf);
+
   {
       GrabUrb(phost);
       USBH_AUDIO_SetFrequency(pclass, AUDIO_Handle->sampleFreq, AUDIO_Handle->numChan,  16);
@@ -404,14 +407,14 @@ debug_printf("usb freq = %d --> %d\n", AUDIO_Handle->sampleFreq, max_msec);
       {
 
         SCB_CleanDCache();
-        if (usbDriver->play_index >= max_msec)
+        if (audio_conf->play_index >= max_msec)
         {
-          usbDriver->play_index = 0;
+          audio_conf->play_index = 0;
         }
 //debug_printf("play: %x, %d\n", usbDriver->playbuffer_ptr, usbDriver->play_index);
         done_flag = 0;
         (void)USBH_IsocSendData(phost,
-                    usbDriver->playbuffer_ptr,
+                    audio_conf->playbuffer_ptr,
                     msec_frames,
                     AUDIO_Handle->headphone.Pipe);
 
@@ -426,14 +429,14 @@ debug_printf("usb freq = %d --> %d\n", AUDIO_Handle->sampleFreq, max_msec);
       {
         done_flag = 1;
 
-        usbDriver->play_index++;
-        usbDriver->playbuffer_ptr += msec_frames;
-        if (usbDriver->playbuffer_ptr >= usbDriver->sound_buffer + usbDriver->sound_buffer_size)
+        audio_conf->play_index++;
+        audio_conf->playbuffer_ptr += msec_frames;
+        if (audio_conf->playbuffer_ptr >= audio_conf->sound_buffer + audio_conf->sound_buffer_size)
         {
-          usbDriver->playbuffer_ptr = usbDriver->sound_buffer;
+          audio_conf->playbuffer_ptr = audio_conf->sound_buffer;
           mix_request_data(1);
         }
-        else if (usbDriver->playbuffer_ptr == usbDriver->sound_buffer + usbDriver->sound_buffer_size/2)
+        else if (audio_conf->playbuffer_ptr == audio_conf->sound_buffer + audio_conf->sound_buffer_size/2)
         {
           mix_request_data(0);
         }
@@ -461,8 +464,6 @@ debug_printf("usb freq = %d --> %d\n", AUDIO_Handle->sampleFreq, max_msec);
 void UsbAudio_Output_Start(AUDIO_CONF *audio_conf)
 {
   PIPE_EVENT pev;
-
-  usbDriver = audio_conf->pDriver;
 
   pev.channel = 0;
   pev.state = EVF_START;

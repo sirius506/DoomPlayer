@@ -470,7 +470,7 @@ static void app_pcm_set(SOUND_DATA *sdp)
     olen = nb * sdp->factor;
     arm_fir_interpolate_q15(&FirInstance, wp, interp_buffer, nb);
 
-    if (aconf->playRate == 32000)
+    if (aconf->devconf->playRate == 32000)
     {
       /* If audio device is 32KHz sampling, need additional convertion,
        * and result PCM length becomes shorter.
@@ -492,7 +492,7 @@ static void app_pcm_set(SOUND_DATA *sdp)
   }
   free(stb);
 
-  if (aconf->playRate == 32000)
+  if (aconf->devconf->playRate == 32000)
   {
 #if 0
     debug_printf("alen: %d --> %d\n", sound_chunk.alen, tolen * 2);

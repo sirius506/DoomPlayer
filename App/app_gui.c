@@ -62,7 +62,7 @@ const WADPROP InvalidFlashGame =
 
 /** I2S audio configuration is always availablle
  */
-static AUDIO_CONF I2S_Audio_Conf = {
+static const AUDIO_DEVCONF I2S_Audio_Conf = {
   .mix_mode = MIXER_I2S_OUTPUT|MIXER_FFT_ENABLE,
   .playRate = 44100,
   .numChan = 2,
@@ -74,9 +74,10 @@ static AUDIO_CONF I2S_Audio_Conf = {
  *  USB audio configuration becames available when
  *  supported gamepad has detected.
  */
-static AUDIO_CONF *usb_audio_conf;
+static const AUDIO_DEVCONF *usb_audio_devconf;
+static AUDIO_CONF AudioConfiguration;
 
-static AUDIO_CONF *current_audio_conf;
+#define	current_audio_devconf	AudioConfiguration.devconf
 
 
 /**
@@ -406,12 +407,12 @@ static void audio_button_handler(lv_event_t *e)
   if (lv_obj_get_state(btn) & LV_STATE_CHECKED)
   {
     lv_label_set_text(label, "USB");
-    current_audio_conf = usb_audio_conf;
+    current_audio_devconf = usb_audio_devconf;
   }
   else
   {
     lv_label_set_text(label, "I2S");
-    current_audio_conf = &I2S_Audio_Conf;
+    current_audio_devconf = &I2S_Audio_Conf;
   }
 }
 
@@ -603,7 +604,7 @@ void StartLvglTask(void *argument)
   lvtask_initialize(&LTDC_HANDLE);
   lvgl_active = 1;
 
-  current_audio_conf = &I2S_Audio_Conf;
+  current_audio_devconf = &I2S_Audio_Conf;
 
   lv_style_init(&style_title);
   lv_style_set_text_font(&style_title,  layout->font_title);
@@ -763,7 +764,7 @@ void StartLvglTask(void *argument)
            * Audio playback task is not running, yet.
            * Make audio selection visible.
            */
-          usb_audio_conf = (AUDIO_CONF *)event.evarg1;
+          usb_audio_devconf = (AUDIO_DEVCONF *)event.evarg1;
           lv_obj_clear_flag(menus->cont_audio, LV_OBJ_FLAG_HIDDEN);
           if (menus->btn_dual)
             lv_obj_clear_state(menus->btn_dual, LV_STATE_DISABLED);
@@ -961,7 +962,7 @@ void StartLvglTask(void *argument)
         lv_obj_t *blabel = lv_label_create(menus->btn_audio);
         lv_obj_set_height(menus->btn_audio, layout->audio_button_height);
         lv_obj_add_flag(menus->btn_audio, LV_OBJ_FLAG_CHECKABLE);
-        if (current_audio_conf == &I2S_Audio_Conf)
+        if (current_audio_devconf == &I2S_Audio_Conf)
         {
           lv_obj_clear_state(menus->btn_audio, LV_STATE_CHECKED);
           lv_label_set_text(blabel, "I2S");
@@ -1092,7 +1093,7 @@ void StartLvglTask(void *argument)
         }
         break;
       case GUIEV_SPLAYER_START:
-        Start_SDLMixer(current_audio_conf);
+        Start_SDLMixer(&AudioConfiguration);
         if (sound_list == NULL)
         {
           sound_list = sound_screen_create(sounds->screen, sounds->ing, &style_menubtn);
@@ -1106,8 +1107,8 @@ void StartLvglTask(void *argument)
         {
           menus->player_ing = lv_group_create();
           lv_indev_set_group(keypad_dev, menus->player_ing);
-          Start_SDLMixer(current_audio_conf);
-          menus->play_scr = music_player_create(current_audio_conf, menus->player_ing, &style_menubtn, keypad_dev);
+          Start_SDLMixer(&AudioConfiguration);
+          menus->play_scr = music_player_create(current_audio_devconf, menus->player_ing, &style_menubtn, keypad_dev);
           lv_obj_add_flag(menus->cont_audio, LV_OBJ_FLAG_HIDDEN);
         }
         else
@@ -1347,5 +1348,5 @@ void app_pairing_close()
 
 AUDIO_CONF *get_audio_conf()
 {
-  return current_audio_conf;
+  return &AudioConfiguration;
 }
