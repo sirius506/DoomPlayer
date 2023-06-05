@@ -83,7 +83,6 @@ static uint32_t spectrum_i_pause = 0;
 static uint32_t bar_ofs = 0;
 static uint32_t spectrum_lane_ofs_start = 0;
 static uint32_t bar_rot = 0;
-static lv_timer_t  * sec_counter_timer;
 static lv_timer_t  * inter_pause_timer;
 static const lv_font_t * font_small;
 static const lv_font_t * font_large;
@@ -365,7 +364,6 @@ static void inter_pause_timeout(lv_timer_t *t)
 
 void _lv_demo_inter_pause_start()
 {
-    lv_timer_pause(sec_counter_timer);
     inter_pause_timer = lv_timer_create(inter_pause_timeout, 800, NULL);
 }
 
@@ -401,7 +399,6 @@ void _lv_demo_music_resume(void)
 #endif
 
     track_len = _lv_demo_music_get_track_length(track_id);
-    lv_timer_resume(sec_counter_timer);
     lv_slider_set_range(slider_obj, 0, track_len);
 
     lv_obj_add_state(play_obj, LV_STATE_CHECKED);
@@ -420,7 +417,6 @@ void _lv_demo_music_pause(void)
     lv_obj_invalidate(spectrum_obj);
 #endif
     lv_img_set_zoom(album_img_obj, ZOOM_BASE);
-    lv_timer_pause(sec_counter_timer);
     lv_obj_clear_state(play_obj, LV_STATE_CHECKED);
 }
 
