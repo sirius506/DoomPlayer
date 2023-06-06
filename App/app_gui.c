@@ -590,6 +590,7 @@ void StartLvglTask(void *argument)
   lv_obj_t *icon_label;
   uint16_t icon_value;
   GAMEPAD_INFO *padInfo;
+  static lv_style_t style_focus;
 
   padInfo = &nullPad;
   fnum = 0;
@@ -611,6 +612,10 @@ void StartLvglTask(void *argument)
 
   lv_style_init(&style_menubtn);
   lv_style_set_outline_width(&style_menubtn, layout->mb_olw);
+
+  lv_style_init(&style_focus);
+  lv_style_set_img_recolor_opa(&style_focus, LV_OPA_10);
+  lv_style_set_img_recolor(&style_focus, lv_color_black());
 
   icon_label = lv_label_create(lv_layer_top());
   //lv_label_set_text(icon_label, " " LV_SYMBOL_USB " " LV_SYMBOL_BLUETOOTH);
@@ -663,6 +668,7 @@ void StartLvglTask(void *argument)
   lv_obj_set_width(menus->cont_bt, LV_SIZE_CONTENT);
   lv_obj_add_event_cb(menus->cont_bt, bt_button_handler, LV_EVENT_CLICKED, NULL);
   lv_obj_add_flag(menus->cont_bt, LV_OBJ_FLAG_HIDDEN);
+  lv_obj_add_style(menus->cont_bt, &style_focus, LV_STATE_FOCUS_KEY);
 
   /* Create Game screen and fill with CHROMA_KEY color,
    * then it will become transparent.
@@ -975,6 +981,7 @@ void StartLvglTask(void *argument)
         lv_obj_add_event_cb(menus->btn_audio, audio_button_handler, LV_EVENT_VALUE_CHANGED, blabel);
         lv_obj_center(blabel);
         lv_group_add_obj(menus->ing, menus->btn_audio);
+        lv_group_add_obj(menus->ing, menus->cont_bt);
         lv_scr_load(menus->screen);
         lv_obj_del(starts->screen);
         break;
@@ -1145,10 +1152,10 @@ void StartLvglTask(void *argument)
           lv_group_del(g);
         lv_obj_add_flag(icon_label, LV_OBJ_FLAG_HIDDEN);
         GamepadHidMode(padInfo, HID_MODE_DOOM);
+
         Mix_FFT_Disable();
-        osThreadYield();
         Mix_HaltMusic();		// Make sure to stop music playing
-        osThreadYield();
+
         lv_scr_load(games->screen);
 
         Board_DoomModeLCD();
