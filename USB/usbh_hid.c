@@ -187,6 +187,8 @@ int orp_len;
   }
 }
 
+static GAMEPAD_INFO KeyboardPad;
+
 /**
   * @brief  USBH_HID_InterfaceInit
   *         The function init the HID class.
@@ -200,6 +202,7 @@ static USBH_StatusTypeDef USBH_HID_InterfaceInit(USBH_ClassTypeDef *pclass, USBH
   uint8_t max_ep;
   uint8_t num = 0U;
   uint8_t interface;
+  GAMEPAD_INFO *padInfo;
 
   if (pclass->cState)
     return USBH_FAIL;
@@ -237,8 +240,13 @@ static USBH_StatusTypeDef USBH_HID_InterfaceInit(USBH_ClassTypeDef *pclass, USBH
   if (phost->device.CfgDesc.Itf_Desc[interface].bInterfaceProtocol == HID_KEYBRD_BOOT_CODE)
   {
     USBH_UsrLog("KeyBoard device found!");
+    padInfo = &KeyboardPad;
+    padInfo->pclass = pclass;
+    padInfo->name = "Keyboard Pad";
+    padInfo->padDriver = NULL;
     HID_Handle->Init = USBH_HID_KeybdInit;
     HID_Handle->devType = DEVTYPE_KEYBOARD;
+    postGuiEventMessage(GUIEV_GAMEPAD_READY, 0, padInfo, NULL);
   }
 #if 0
   else if (phost->device.CfgDesc.Itf_Desc[interface].bInterfaceProtocol  == HID_MOUSE_BOOT_CODE)
@@ -249,7 +257,6 @@ static USBH_StatusTypeDef USBH_HID_InterfaceInit(USBH_ClassTypeDef *pclass, USBH
 #endif
   else
   {
-    GAMEPAD_INFO *padInfo;
     const struct sGamePadDriver *pd;
 
     padInfo = IsSupportedGamePad(phost->device.DevDesc.idVendor, phost->device.DevDesc.idProduct);
