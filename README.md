@@ -16,7 +16,7 @@ Game part is based on [Chocolate-doom 3.0.1](https://www.chocolate-doom.org/).
 * Supports USB connected keyboard, DUALSHOCK4 and DualSense controller for GUI and Game operation.
 * Supports Bluetooth connection with DUALSHOCK4 and DualSense controllers.
 * Supports DOOM1, DOOM2 and TNT WAD files. Selected WAD file is flashed to the SPI flash for the playing.
-* Selectable Audio output -- audio jack on the Discovery board or headset connected to the DualSense.
+* Selectable Audio output -- audio jack on the Discovery board or headset jack on the USB connected DUALSHOCK4 and/or DualSense controllers.
 * Plays FLAC format game music files stored on the SD card.
 * Plays SFX PCM sounds found on the SPI flash. When DualSense is selected for audio output, SFX sound is also used to generate vibration effect.
 * DualSense input demo which shows your button and stick operations on the LCD screen.
@@ -37,5 +37,5 @@ Please refer [Wiki pages](https://github.com/sirius506/DoomPlayer/wiki) for more
 * Check [wiki pages](https://github.com/sirius506/DoomPlayer/wiki) for more explanations and sample screen shots.
 
 ## TODO
-* Support USB Mouse
-* Support USB HUB class
+* Support Bluetooth keyboard
+
