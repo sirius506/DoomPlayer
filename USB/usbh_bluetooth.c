@@ -126,7 +126,8 @@ MESSAGEQ_DEF(aclbuffq, aclptrBuffer, sizeof(aclptrBuffer))
 TASK_DEF(btdtask, BTD_STACK_SIZE, osPriorityAboveNormal5)
 
 #define	BTS_STACK_SIZE	800
-TASK_DEF(btstacktask, BTS_STACK_SIZE, osPriorityNormal2)
+TASK_DEF(btstacktask, BTS_STACK_SIZE, osPriorityAboveNormal6)
+//TASK_DEF(btstacktask, BTS_STACK_SIZE, osPriorityNormal2)
 
 extern void StartBtstackTask(void *arg);
 

@@ -96,6 +96,7 @@ SECTIONS
     *usbh_pipes.c.obj (.text .text*)
     *usbh_hid.c.obj (.text .text*)
     *usbh_bluetooth.c.obj (.text .text*)
+    *app_sound.c.obj (.text .text*)
 
     _eITCM = .;
   } > ITCMRAM AT> FLASH

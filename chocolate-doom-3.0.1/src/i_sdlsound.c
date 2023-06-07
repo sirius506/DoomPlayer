@@ -1136,7 +1136,9 @@ static boolean I_SDL_InitSound(boolean _use_sfx_prefix)
 
     Mix_AllocateChannels(NUM_CHANNELS);
 
+#if 0
     SDL_PauseAudio(0);
+#endif
 
     sound_initialized = true;
 

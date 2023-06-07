@@ -84,7 +84,7 @@
 #define configMESSAGE_BUFFER_LENGTH_TYPE         size_t
 /* USER CODE END MESSAGE_BUFFER_LENGTH_TYPE */
 
-#define	configCHECK_FOR_STACK_OVERFLOW	1
+//#define	configCHECK_FOR_STACK_OVERFLOW	1
 
 /* Co-routine definitions. */
 #define configUSE_CO_ROUTINES                    0

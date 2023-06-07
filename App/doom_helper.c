@@ -109,7 +109,7 @@ void send_key_event(HID_HandleTypeDef *HID_Handle, int evcode, int kbdcode, int 
     case 42:
       pad_data.key = LV_KEY_BACKSPACE;
       break;
-    case 43:
+    case 43:	/* TAB */
       if (modkey & 0x22)		/* Shift state? */
         pad_data.key = LV_KEY_PREV;
       else
@@ -118,16 +118,16 @@ void send_key_event(HID_HandleTypeDef *HID_Handle, int evcode, int kbdcode, int 
     case 76:
       pad_data.key = LV_KEY_DEL;
       break;
-    case 79:
+    case 79:	/* Right arrow */
       pad_data.key = LV_KEY_RIGHT;
       break;
-    case 80:
+    case 80:	/* Left arrow */
       pad_data.key = LV_KEY_LEFT;
       break;
-    case 81:
+    case 81:	/* Down arrow */
       pad_data.key = LV_KEY_DOWN;
       break;
-    case 82:
+    case 82:	/* Up arrow */
       pad_data.key = LV_KEY_UP;
       break;
     default:

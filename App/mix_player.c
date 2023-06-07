@@ -15,8 +15,6 @@
 
 #define	IDLE_PERIOD	50
 
-#define	DO_FFT
-
 #include "dr_flac.h"
 #include "audio_output.h"
 #include "src32k.h"
@@ -31,7 +29,7 @@ TASK_DEF(mixplayer, PLAYER_STACK_SIZE, osPriorityAboveNormal)
  * SilentBuffer is used to generate silience.
  */
 static SECTION_AUDIOSRAM AUDIO_STEREO MusicFrameBuffer[BUF_FRAMES];
-static const AUDIO_STEREO SilentBuffer[BUF_FRAMES/2];
+static const AUDIO_STEREO SilentBuffer[BUF_FRAMES];
 
 #define	NUMTAPS	31
 
@@ -47,7 +45,7 @@ SECTION_PREFFT float32_t audio_buffer[AUDIO_SAMPLES];	// Decimated Audio samples
  * symmetry properties of the FFT.
  */
 SECTION_DTCMRAM float32_t fft_real_buffer[FFT_SAMPLES];		// FFT input buffer (only real part)
-SECTION_DTCMRAM float32_t fft_result_buffer[FFT_SAMPLES];	// FFT resut buffer (complex number)
+SECTION_DTCMRAM float32_t fft_result_buffer[FFT_SAMPLES];	// FFT result buffer (complex number)
 
 SECTION_DTCMRAM float32_t float_mag_buffer[FFT_SAMPLES/2];
 
@@ -339,7 +337,7 @@ static int process_fft(FFTINFO *fftInfo, AUDIO_STEREO *pmusic, int frames)
   {
     fftInfo->putptr = audio_buffer;
   }
-  fftInfo->samples += OUT_SAMPLES;
+  fftInfo->samples += frames/FFT_DECIMATION_FACTOR;
 
   if (fftInfo->samples >= FFT_SAMPLES)
   {
@@ -553,12 +551,12 @@ static void StartMixPlayerTask(void *args)
           pmusic += NUM_FRAMES;
         }
 #ifdef MIX_DEBUG
-debug_printf("mix2: pmusic = %x\n", pmusic);
+        debug_printf("mix2: pmusic = %x\n", pmusic);
 #endif
         /* Read next music data into free space. */
         num_read = drflac_read_pcm_frames_s16(pflac, NUM_FRAMES, (drflac_int16 *)pmusic);
 #ifdef MIX_DEBUG
-debug_printf("num_read = %d\n", num_read);
+        debug_printf("num_read = %d\n", num_read);
 #endif
         if (num_read > 0)
         {
@@ -621,7 +619,7 @@ debug_printf("num_read = %d\n", num_read);
           pmusic += NUM_FRAMES;
         pDriver->MixSound(audio_config, pmusic, mix_frames);
 #ifdef MIX_DEBUG
-debug_printf("Mix2 (%d), %d @ %d\n", ctrl.option, mixInfo->ppos, flacInfo->pcm_pos);
+        debug_printf("Mix2 (%d), %d @ %d\n", ctrl.option, mixInfo->ppos, flacInfo->pcm_pos);
 #endif
         break;
       case MIX_ST_IDLE:
@@ -682,7 +680,11 @@ debug_printf("Mix2 (%d), %d @ %d\n", ctrl.option, mixInfo->ppos, flacInfo->pcm_p
 #ifdef MIX_DEBUG
       debug_printf("MIX_HALT\n");
 #endif
-      drflac_close_fatfs(pflac);
+      if (pflac)
+      {
+        drflac_close_fatfs(pflac);
+        pflac = NULL;
+      }
       mixInfo->state = MIX_ST_IDLE;
       mixInfo->idle_count = IDLE_PERIOD;
       break;
@@ -868,6 +870,9 @@ int Mix_PlayChannel(int channel, Mix_Chunk *chunk, int loops)
   return channel;
 }
 
+/**
+ * @brief Return current sound playing sample poistion in pusedoRate.
+ */
 int Mix_PlayPosition(int channel)
 {
   Mix_Chunk *chunk;
@@ -879,8 +884,13 @@ int Mix_PlayPosition(int channel)
   pos = ChanInfo[channel].pread - (AUDIO_STEREO *)chunk->abuf;
   osMutexRelease(soundLockId);
 
-  if (aconf->devconf->playRate == 32000)
-    pos = pos * 3 / 2;
+  if (aconf->devconf->playRate != aconf->devconf->pseudoRate)
+  {
+    if (aconf->devconf->playRate < aconf->devconf->pseudoRate)
+      pos = pos * aconf->devconf->pseudoRate / aconf->devconf->playRate;
+    else
+      pos = pos * aconf->devconf->playRate / aconf->devconf->pseudoRate;
+  }
   return pos;
 }
 
@@ -974,18 +984,10 @@ int Mix_AllocateChannels(int chans)
 {
   int i;
 
-  debug_printf("%ss:\n", __FUNCTION__);
-
   osMutexAcquire(soundLockId, osWaitForever);
   for (i = 0; i < chans; i++)
     ChanInfo[i].flag = FL_ALLOCED;
   osMutexRelease(soundLockId);
-  return 1;
-}
-
-int SDL_PauseAudio(int on)
-{
-  debug_printf("%ss:\n", __FUNCTION__);
   return 1;
 }
 

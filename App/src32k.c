@@ -62,8 +62,8 @@ static q15_t interp_buffer[NUM_FRAMES*2];
 /*
  * @brief Convert 48KHz 16bit PCM data into 32KHz sampling.
  *
- * @param [in,out] bp pointer to 16bit PCM data
- * @param flen Number of PCM samples
+ * @param[in,out] bp pointer to 16bit PCM data
+ * @param[in] flen Number of PCM samples
  * @return Number of generated samples
  */
 int src32k_pcm_mono(int16_t *bp, int flen)
@@ -127,8 +127,8 @@ int src32k_pcm(AUDIO_STEREO *pcm, int flen)
 
 /**
  * @brief Convert 48KHz sampling stereo audio data to 32KHz sampling.
- * @param [in,out] psrc pointer to audio data.
- * @param [in] in_frames Number of input stereo data frames.
+ * @param[in,out] psrc pointer to audio data.
+ * @param[in] in_frames Number of input stereo data frames.
  * @returns Number of generated stereo data frames.
  */
 int src32k_process(AUDIO_STEREO *psrc, int in_frames)

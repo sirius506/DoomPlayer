@@ -18,7 +18,6 @@
 
 #define	FFT_DECIMATION_FACTOR	3
 
-#define	OUT_SAMPLES	(NUM_FRAMES/FFT_DECIMATION_FACTOR)
 #define	AUDIO_SAMPLES	3200	
 
 #define	FFT_SAMPLES	2048
@@ -51,7 +50,6 @@ typedef struct {
 #define	FL_ALLOCED	(1<<0)
 #define	FL_SET		(1<<1)
 #define	FL_PLAY		(1<<2)
-#define	FL_32K		(1<<3)
 
 extern CHANINFO ChanInfo[NUM_CHANNELS];
 extern void mix_request_data(int full);

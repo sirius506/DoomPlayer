@@ -40,8 +40,10 @@
 #define READ_CPLT_MSG      (uint32_t) 1
 #define WRITE_CPLT_MSG     (uint32_t) 2
 
+#ifdef USE_STATIC_DEF
 static uint8_t sdqBuffer[QUEUE_SIZE * sizeof(uint16_t)];
 MESSAGEQ_DEF(sdevq, sdqBuffer, sizeof(sdqBuffer))
+#endif
 /*
 ==================================================================
 enable the defines below to send custom rtos messages
@@ -212,8 +214,11 @@ Stat = STA_NOINIT;
       osMessageQDef(SD_Queue, QUEUE_SIZE, uint16_t);
       SDQueueID = osMessageCreate (osMessageQ(SD_Queue), NULL);
 #else
-      //SDQueueID = osMessageQueueNew(QUEUE_SIZE, 2, NULL);
+#ifdef USE_STATIC_DEF
       SDQueueID = osMessageQueueNew(QUEUE_SIZE, 2, &attributes_sdevq);
+#else
+      SDQueueID = osMessageQueueNew(QUEUE_SIZE, 2, NULL);
+#endif
 #endif
       }
 
