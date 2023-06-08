@@ -110,10 +110,14 @@ static const hal_flash_bank_t hal_flash_bank_memory_instance = {
  * Initialize instance
  */
 const hal_flash_bank_t * hal_flash_bank_memory_init_instance(hal_flash_bank_memory_t * self, uint8_t * storage, uint32_t storage_size){
-	self->bank_size = storage_size / 2;
-	self->banks[0] = storage;
-	self->banks[1] = &storage[self->bank_size];
-	memset(storage, 0xff, storage_size);
-	return &hal_flash_bank_memory_instance;
+ 
+    self->bank_size = storage_size / 2;
+    self->banks[0] = storage;
+    self->banks[1] = &storage[self->bank_size];
+    if ((self->bank_size != storage_size/2) || (memcmp(storage, "BTstack", 8) != 0))
+    {
+      memset(storage, 0xff, storage_size);
+    }
+    return &hal_flash_bank_memory_instance;
 }
 
