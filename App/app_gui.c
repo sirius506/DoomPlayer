@@ -1250,14 +1250,37 @@ void StartLvglTask(void *argument)
         fnum++;
         fnum %= 1000;
         break;
-      case GUIEV_XDIR_INC:
-      case GUIEV_XDIR_DEC:
-      case GUIEV_YDIR_INC:
-      case GUIEV_YDIR_DEC:
+      case GUIEV_RIGHT_XDIR:
+      case GUIEV_RIGHT_YDIR:
         if (lv_scr_act() == sounds->screen)
-          sound_process_stick(event.evcode);
+          sound_process_stick(event.evcode, event.evval0);
         else if (lv_scr_act() == menus->play_scr)
-          music_process_stick(event.evcode);
+          music_process_stick(event.evcode, event.evval0);
+        break;
+      case GUIEV_LEFT_XDIR:
+        {
+          int brval = Board_Get_Brightness();
+
+          if ((int)event.evval0 > 0)
+           brval += 10;
+          else
+           brval -= 10;
+          if (brval > 100) brval = 100;
+          if (brval < 0) brval = 0;
+          Board_Set_Brightness(brval);
+        }
+        break;
+      case GUIEV_LEFT_YDIR:
+        {
+          int cvol = Mix_GetVolume();
+          if ((int)event.evval0 < 0)
+           cvol += 10;
+          else
+           cvol -= 10;
+          if (cvol > 100) cvol = 100;
+          if (cvol < 0) cvol = 0;
+          Mix_VolumeMusic(cvol);
+        }
         break;
       case GUIEV_ICON_CHANGE:
         {

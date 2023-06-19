@@ -502,7 +502,7 @@ static void app_pcm_set(SOUND_DATA *sdp)
   Mix_LoadChannel(0, &sound_chunk, 1);
 }
 
-void sound_process_stick(int evcode)
+void sound_process_stick(int evcode, int direction)
 {
   CHART_INFO *cinfo = &ChartInfo;
   int w, val;
@@ -511,31 +511,39 @@ void sound_process_stick(int evcode)
 
   switch (evcode)
   {
-  case GUIEV_XDIR_INC:
-    val = lv_obj_get_scroll_x(cinfo->chart);
-    w = lv_obj_get_width(cinfo->chart);
-    lv_obj_scroll_to_x(cinfo->chart, val + w / 2, LV_ANIM_OFF);
+  case GUIEV_RIGHT_XDIR:
+    if (direction > 0)
+    {
+      val = lv_obj_get_scroll_x(cinfo->chart);
+      w = lv_obj_get_width(cinfo->chart);
+      lv_obj_scroll_to_x(cinfo->chart, val + w / 2, LV_ANIM_OFF);
+    }
+    else
+    {
+      val = lv_obj_get_scroll_x(cinfo->chart);
+      w = lv_obj_get_width(cinfo->chart);
+      val -= w / 2;
+      if (val < 0) val = 0;
+      lv_obj_scroll_to_x(cinfo->chart, val, LV_ANIM_OFF);
+    }
     break;
-  case GUIEV_XDIR_DEC:
-    val = lv_obj_get_scroll_x(cinfo->chart);
-    w = lv_obj_get_width(cinfo->chart);
-    val -= w / 2;
-    if (val < 0) val = 0;
-    lv_obj_scroll_to_x(cinfo->chart, val, LV_ANIM_OFF);
-    break;
-  case GUIEV_YDIR_INC:
-    val += LV_IMG_ZOOM_NONE;
-    if (val > LV_IMG_ZOOM_NONE * 10)
-      val = LV_IMG_ZOOM_NONE * 10;
-    lv_slider_set_value(cinfo->slider, val, LV_ANIM_OFF);
-    lv_chart_set_zoom_x(cinfo->chart, val);
-    break;
-  case GUIEV_YDIR_DEC:
-    val -= LV_IMG_ZOOM_NONE;
-    if (val < LV_IMG_ZOOM_NONE)
-      val = LV_IMG_ZOOM_NONE;
-    lv_slider_set_value(cinfo->slider, val, LV_ANIM_OFF);
-    lv_chart_set_zoom_x(cinfo->chart, val);
+  case GUIEV_RIGHT_YDIR:
+    if (direction < 0)
+    {
+      val += LV_IMG_ZOOM_NONE;
+      if (val > LV_IMG_ZOOM_NONE * 10)
+        val = LV_IMG_ZOOM_NONE * 10;
+      lv_slider_set_value(cinfo->slider, val, LV_ANIM_OFF);
+      lv_chart_set_zoom_x(cinfo->chart, val);
+    }
+    else
+    {
+      val -= LV_IMG_ZOOM_NONE;
+      if (val < LV_IMG_ZOOM_NONE)
+        val = LV_IMG_ZOOM_NONE;
+      lv_slider_set_value(cinfo->slider, val, LV_ANIM_OFF);
+      lv_chart_set_zoom_x(cinfo->chart, val);
+    }
     break;
   }
 }

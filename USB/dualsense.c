@@ -583,7 +583,8 @@ static void DualSenseGetOutputReport(uint8_t **ptr, int *plength, int hid_mode, 
 
 static uint32_t last_button;
 static int pad_timer;
-static int16_t xinc, yinc;
+static int16_t left_xinc, left_yinc;
+static int16_t right_xinc, right_yinc;
 
 /**
  * @brief Convert HID input report to LVGL kaycode
@@ -637,6 +638,29 @@ static void DualSense_LVGL_Keycode(struct dualsense_input_report *rp, uint8_t ha
     }
 #endif
   }
+  ix = rp->x - 128;
+  iy = rp->y - 128;
+  ax = (ix < 0)? -ix : ix;
+  ay = (iy < 0)? -iy : iy;
+  ax = (ax > 80) ? 1 : 0;
+  ay = (ay > 80) ? 1 : 0;
+
+  if (ax != 0)
+  {
+    if (ix < 0) ax = -1;
+    if (ax != left_xinc)
+      postGuiEventMessage(GUIEV_LEFT_XDIR, ax, NULL, NULL);
+  }
+  left_xinc = ax;
+
+  if (ay != 0)
+  {
+    if (iy < 0) ay = -1;
+    if (ay != left_yinc)
+      postGuiEventMessage(GUIEV_LEFT_YDIR, ay, NULL, NULL);
+  }
+  left_yinc = ay;
+
   ix = rp->rx - 128;
   iy = rp->ry - 128;
   ax = (ix < 0)? -ix : ix;
@@ -647,18 +671,18 @@ static void DualSense_LVGL_Keycode(struct dualsense_input_report *rp, uint8_t ha
   if (ax != 0)
   {
     if (ix < 0) ax = -1;
-    if (ax != xinc)
-      postGuiEventMessage((ax > 0)? GUIEV_XDIR_INC : GUIEV_XDIR_DEC, 0, NULL, NULL);
+    if (ax != right_xinc)
+      postGuiEventMessage(GUIEV_RIGHT_XDIR, ax, NULL, NULL);
   }
-  xinc = ax;
+  right_xinc = ax;
 
   if (ay != 0)
   {
     if (iy < 0) ay = -1;
-    if (ay != yinc)
-      postGuiEventMessage((ay > 0)? GUIEV_YDIR_DEC : GUIEV_YDIR_INC, 0, NULL, NULL);
+    if (ay != right_yinc)
+      postGuiEventMessage(GUIEV_RIGHT_YDIR, ay, NULL, NULL);
   }
-  yinc = ay;
+  right_yinc = ay;
 }
 
 void DualSenseBtSetup(uint16_t hid_host_cid)

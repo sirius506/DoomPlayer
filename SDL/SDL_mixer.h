@@ -40,6 +40,7 @@ extern int Mix_PlayingMusic();
 extern void Mix_HaltMusic();
 extern void Mix_FreeMusic(Mix_Music *music);
 extern int Mix_VolumeMusic(int volume);
+extern int Mix_GetVolume();
 
 extern int Mix_PlayChannel(int channel, Mix_Chunk *chunk, int loops);
 extern int Mix_PlayPosition(int channel);

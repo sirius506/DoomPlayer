@@ -442,6 +442,9 @@ static void StartMixPlayerTask(void *args)
   soundLockId = audio_config->soundLockId = osMutexNew(&attributes_sound_lock);
 
   mixInfo->mixevqId = osMessageQueueNew(MIX_EV_DEPTH, sizeof(MIXCONTROL_EVENT), &attributes_mixevq);
+  mixInfo->volume = 80;
+
+  pDriver->SetVolume(mixInfo->volume);
 
   /* We'll keep sending contents of FinalSoundBuffer using DMA */
 
@@ -689,8 +692,11 @@ static void StartMixPlayerTask(void *args)
       mixInfo->idle_count = IDLE_PERIOD;
       break;
     case MIX_SET_VOLUME:
+#ifdef MIX_DEBUG
       debug_printf("SetVolume: %d\n", ctrl.arg);
-      pDriver->SetVolume((int) ctrl.arg);
+#endif
+      mixInfo->volume = (int) ctrl.arg;
+      pDriver->SetVolume(mixInfo->volume);
       break;
     default:
       debug_printf("event = %x\n", ctrl.event);
@@ -698,6 +704,11 @@ static void StartMixPlayerTask(void *args)
     }
   }
   pDriver->Stop(audio_config);
+}
+
+int Mix_GetVolume()
+{
+  return MixInfo.volume;
 }
 
 /*

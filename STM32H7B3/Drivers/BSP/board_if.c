@@ -101,6 +101,7 @@ extern uint16_t lvgl_fb[];
 
 static volatile uint8_t doom_dump_request;
 static int gui_alpha;
+static int lcd_brightness;
 
 void Board_SDRAM_Init()
 {
@@ -117,7 +118,19 @@ void Board_LCD_Init()
   BSP_LCD_SetLayerVisible(0, 0, DISABLE);		// Disable DOOM layer
   BSP_LCD_SetLayerVisible(0, 1, ENABLE);		// Enable LVGL layer
   BSP_LCD_SetBrightness(0, 80);
+  lcd_brightness = 80;
   board_lcd_mode = LCD_MODE_LVGL;
+}
+
+void Board_Set_Brightness(int val)
+{
+  BSP_LCD_SetBrightness(0, val);
+  lcd_brightness = val;
+}
+
+int Board_Get_Brightness()
+{
+  return lcd_brightness;
 }
 
 void Board_GUI_LayerVisible(int alpha)

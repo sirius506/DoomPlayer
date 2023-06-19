@@ -421,15 +421,21 @@ lv_obj_t *music_list_create(lv_obj_t *parent, uint32_t dhpos, LUMP_HEADER *lh, i
     return list;
 }
 
-void music_process_stick(int evcode)
+void music_process_stick(int evcode, int direction)
 {
   switch (evcode)
   {
-  case GUIEV_YDIR_INC:
-    lv_obj_scroll_to_y(MusicInfo->main_cont, LV_VER_RES + LV_DEMO_MUSIC_HANDLE_SIZE, LV_ANIM_ON);
+  case GUIEV_RIGHT_YDIR:
+    if (direction < 0)
+    {
+      lv_obj_scroll_to_y(MusicInfo->main_cont, LV_VER_RES + LV_DEMO_MUSIC_HANDLE_SIZE, LV_ANIM_ON);
+    }
+    else
+    {
+      lv_obj_scroll_to_y(MusicInfo->main_cont, 0, LV_ANIM_ON);
+    }
     break;
-  case GUIEV_YDIR_DEC:
-    lv_obj_scroll_to_y(MusicInfo->main_cont, 0, LV_ANIM_ON);
+  default:
     break;
   }
 }

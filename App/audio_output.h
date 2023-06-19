@@ -27,6 +27,7 @@ typedef struct {
   uint32_t  ppos;		// Current play position in samples
   uint16_t  psec;		// Current play position in seconds
   uint16_t  idle_count;
+  uint16_t  volume;		// Volume value 0..100
 } MIX_INFO;
 
 typedef struct {

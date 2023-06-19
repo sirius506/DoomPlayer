@@ -31,5 +31,7 @@ extern void Board_DOOM_LayerInvisible();
 extern void Board_DoomModeLCD();
 extern lv_img_dsc_t *Board_Endoom(uint8_t *bp);
 extern uint8_t *Board_DoomCapture();
+extern int Board_Get_Brightness();
+extern void Board_Set_Brightness(int val);
 
 #endif

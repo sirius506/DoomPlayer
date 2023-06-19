@@ -70,10 +70,10 @@ typedef enum {
   GUIEV_DUALTEST_START,
   GUIEV_DUALTEST_UPDATE,
   GUIEV_DUALTEST_DONE,
-  GUIEV_XDIR_INC,
-  GUIEV_XDIR_DEC,
-  GUIEV_YDIR_INC,
-  GUIEV_YDIR_DEC,
+  GUIEV_LEFT_XDIR,
+  GUIEV_LEFT_YDIR,
+  GUIEV_RIGHT_XDIR,
+  GUIEV_RIGHT_YDIR,
   GUIEV_KBD_OK,
   GUIEV_KBD_CANCEL,
   GUIEV_CHEAT_SEL,
@@ -145,8 +145,8 @@ extern void StartConsoleTask(void *argument);
 extern void StartUsb();
 extern void StartDoomTask(void *argument);
 extern void Start_SDLMixer(AUDIO_CONF *audio_conf);
-extern void music_process_stick(int evcode);
-extern void sound_process_stick(int evcode);
+extern void music_process_stick(int evcode, int evval);
+extern void sound_process_stick(int evcode, int evval);
 
 extern KBDEVENT *kbd_get_event();
 extern void btapi_send_report(uint8_t *ptr, int len);

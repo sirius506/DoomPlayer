@@ -99,6 +99,7 @@ extern uint16_t lvgl_fb[];
 
 static volatile uint8_t doom_dump_request;
 static int gui_alpha;
+static int lcd_brightness;
 
 void Board_SDRAM_Init()
 {
@@ -112,9 +113,21 @@ void Board_LCD_Init()
   BSP_LCD_LayerDefaultInit(0, 0);
   BSP_LCD_LayerDefaultInit(1, 0);
   BSP_LCD_SelectLayer(1);
-  //BSP_LCD_SetBrightness(70);
+  BSP_LCD_SetBrightness(70);
+  lcd_brightness = 70;
 
   BSP_PB_Init(BUTTON_WAKEUP, BUTTON_MODE_EXTI);
+}
+
+void Board_Set_Brightness(int val)
+{
+  BSP_LCD_SetBrightness(val);
+  lcd_brightness = val;
+}
+
+int Board_Get_Brightness()
+{
+  return lcd_brightness;
 }
 
 void Board_GUI_LayerVisible(int alpha)
