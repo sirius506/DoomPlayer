@@ -473,58 +473,10 @@ static int pad_timer;
 static int16_t left_xinc, left_yinc;
 static int16_t right_xinc, right_yinc;
 
-/**
- * @brief Convert HID input report to LVGL kaycode
- */
-static void DS4_LVGL_Keycode(struct ds4_input_report *rp, uint8_t hat, uint32_t vbutton, HID_REPORT *rep)
+static void decode_stick(struct ds4_input_report *rp)
 {
-  static lv_indev_data_t pad_data;
   int ix, iy, ax, ay;
 
-  if (vbutton != last_button)
-  {
-    uint32_t changed;
-    const PADKEY_DATA *padkey = PadKeyDefs;
-
-    changed = last_button ^ vbutton;
-    changed &= VBMASK_CHECK;
-
-    while (changed && padkey->mask)
-    {
-      if (changed & padkey->mask)
-      {
-        changed &= ~padkey->mask;
-
-        pad_data.key = padkey->lvkey;
-        pad_data.state = (vbutton & padkey->mask)? LV_INDEV_STATE_PRESSED : LV_INDEV_STATE_RELEASED;
-        pad_data.continue_reading = (changed != 0)? true : false;
-        pad_timer = 0;
-        send_padkey(&pad_data);
-
-      }
-      padkey++;
-    }
-    last_button = vbutton;
-  }
-  else if (pad_data.state == LV_INDEV_STATE_PRESSED)
-  {
-    /* Key has been pressed */
-
-    pad_timer++;
-#ifdef USE_PAD_TIMER
-    if (pad_timer > 15)		/* Takes repeat start delay */
-    {
-      if ((pad_timer & 3) == 0)	/* inter repeat delay passed */
-      {
-        /* Generate release and press event */
-        pad_data.state = LV_INDEV_STATE_RELEASED;
-        send_padkey(&pad_data);
-        pad_data.state = LV_INDEV_STATE_PRESSED;
-        send_padkey(&pad_data);
-      }
-    }
-#endif
-  }
   ix = rp->x - 128;
   iy = rp->y - 128;
   ax = (ix < 0)? -ix : ix;
@@ -574,6 +526,60 @@ static void DS4_LVGL_Keycode(struct ds4_input_report *rp, uint8_t hat, uint32_t 
   right_yinc = ay;
 }
 
+/**
+ * @brief Convert HID input report to LVGL kaycode
+ */
+static void DS4_LVGL_Keycode(struct ds4_input_report *rp, uint8_t hat, uint32_t vbutton, HID_REPORT *rep)
+{
+  static lv_indev_data_t pad_data;
+
+  if (vbutton != last_button)
+  {
+    uint32_t changed;
+    const PADKEY_DATA *padkey = PadKeyDefs;
+
+    changed = last_button ^ vbutton;
+    changed &= VBMASK_CHECK;
+
+    while (changed && padkey->mask)
+    {
+      if (changed & padkey->mask)
+      {
+        changed &= ~padkey->mask;
+
+        pad_data.key = padkey->lvkey;
+        pad_data.state = (vbutton & padkey->mask)? LV_INDEV_STATE_PRESSED : LV_INDEV_STATE_RELEASED;
+        pad_data.continue_reading = (changed != 0)? true : false;
+        pad_timer = 0;
+        send_padkey(&pad_data);
+
+      }
+      padkey++;
+    }
+    last_button = vbutton;
+  }
+  else if (pad_data.state == LV_INDEV_STATE_PRESSED)
+  {
+    /* Key has been pressed */
+
+    pad_timer++;
+#ifdef USE_PAD_TIMER
+    if (pad_timer > 15)		/* Takes repeat start delay */
+    {
+      if ((pad_timer & 3) == 0)	/* inter repeat delay passed */
+      {
+        /* Generate release and press event */
+        pad_data.state = LV_INDEV_STATE_RELEASED;
+        send_padkey(&pad_data);
+        pad_data.state = LV_INDEV_STATE_PRESSED;
+        send_padkey(&pad_data);
+      }
+    }
+#endif
+  }
+  decode_stick(rp);
+}
+
 static const uint8_t sdl_hatmap[16] = {
   SDL_HAT_UP,       SDL_HAT_RIGHTUP,   SDL_HAT_RIGHT,    SDL_HAT_RIGHTDOWN,
   SDL_HAT_DOWN,     SDL_HAT_LEFTDOWN,  SDL_HAT_LEFT,     SDL_HAT_LEFTUP,
@@ -584,6 +590,7 @@ static const uint8_t sdl_hatmap[16] = {
 static void DualShock_DOOM_Keycode(struct ds4_input_report *rp, uint8_t hat, uint32_t vbutton, HID_REPORT *rep)
 {
   SDL_JoyStickSetButtons(sdl_hatmap[hat], vbutton & 0x7FFF);
+  decode_stick(rp);
 }
 
 void DualShockBtSetup(uint16_t hid_host_cid)
