@@ -2,7 +2,7 @@
 
 ![startup_LVGL](https://user-images.githubusercontent.com/12758516/218339900-31bd464d-3fbf-48eb-a38c-15aa8c6d7b69.jpg)
 
-Doom Player is DOOM Music/SoundrGame player for STM32H7B3I-DK and STM32F769I-DISCO boards.
+Doom Player is DOOM Music/Sound and Game player for STM32H7B3I-DK and STM32F769I-DISCO boards.
 Game part is based on [Chocolate-doom 3.0.1](https://www.chocolate-doom.org/).
 
 ![music_LVGL](https://user-images.githubusercontent.com/12758516/218339999-62f67c08-b343-4a72-9c57-33ed63e5c785.jpg)
