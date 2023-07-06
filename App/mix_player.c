@@ -7,6 +7,8 @@
 #include <arm_math.h>
 #include <stdlib.h>
 
+#define USE_SD_PRE_READ
+
 #define DR_FLAC_IMPLEMENTATION
 #define	DR_FLAC_NO_CRC
 #define	DR_FLAC_NO_STDIO
@@ -21,7 +23,34 @@
 
 #define PLAYER_STACK_SIZE  1400
 
-TASK_DEF(mixplayer, PLAYER_STACK_SIZE, osPriorityAboveNormal)
+TASK_DEF(mixplayer, PLAYER_STACK_SIZE, osPriorityAboveNormal2)
+TASK_DEF(flacreader, 400, osPriorityAboveNormal)
+
+#define MIXREADQ_DEPTH     3
+#define	READB_FACTOR	3
+
+typedef struct {
+ uint8_t buffer[DR_FLAC_BUFFER_SIZE];
+ int    dlen;
+} BUFFER_DESC;
+
+enum {
+  READER_START = 1,
+  READ_BUFFER,
+  READER_STOP,
+};
+
+enum {
+  READER_STOPPED = 0,
+  READER_RUNNING = 1,
+};
+
+static uint8_t readqBuffer[MIXREADQ_DEPTH * sizeof(uint16_t)];
+BUFFER_DESC flac_reader_buffer[READB_FACTOR];
+
+MESSAGEQ_DEF(flacreadq, readqBuffer, sizeof(readqBuffer))
+SEMAPHORE_DEF(flac_readsem)
+SEMAPHORE_DEF(flac_sendsem)
 
 /*
  * Buffers to store music source data.
@@ -29,7 +58,7 @@ TASK_DEF(mixplayer, PLAYER_STACK_SIZE, osPriorityAboveNormal)
  * SilentBuffer is used to generate silience.
  */
 static SECTION_AUDIOSRAM AUDIO_STEREO MusicFrameBuffer[BUF_FRAMES];
-static const AUDIO_STEREO SilentBuffer[BUF_FRAMES];
+static SECTION_AUDIOSRAM AUDIO_STEREO SilentBuffer[BUF_FRAMES];
 
 #define	NUMTAPS	31
 
@@ -62,7 +91,6 @@ typedef struct {
   float32_t *putptr;
   float32_t *getptr;
   int16_t samples;      /* Accumurated data samples */
-  osMessageQueueId_t *fftqId;
 } FFTINFO;
 
 SECTION_DTCMRAM FFTINFO FftInfo;
@@ -74,6 +102,12 @@ typedef struct {
   int  loop_start;
   int  loop_end;
   int  pcm_pos;
+  osMessageQueueId_t *readqId;
+  volatile int  read_index;
+  volatile int  send_index;
+  volatile int  reader_status;
+  osSemaphoreId_t  readsemId;
+  osSemaphoreId_t  sendsemId;
 } FLACINFO;
 
 SECTION_DTCMRAM FLACINFO FlacInfo;
@@ -144,10 +178,62 @@ static size_t drflac__on_read_fatfs(void* pUserData, void* pBufferOut, size_t by
     UINT nread;
     FRESULT res;
     FLACINFO *piflac = (FLACINFO *)pUserData;
+    osStatus st;
 
+#ifdef USE_SD_PRE_READ
+    /*
+     * if bytesToRead is equal to DR_FLAC_BUFFER_SIZE, it means we are going to read
+     * stream data part. 
+     */
+    if (bytesToRead != DR_FLAC_BUFFER_SIZE)
+    {
+      res = f_read(piflac->pfile, pBufferOut, bytesToRead, &nread);
+      if (res == FR_OK)
+        return nread;
+    }
+    else
+    {
+      uint16_t cmd;
+
+      if (piflac->send_index < 0)	// We reached to end of the stream
+      {
+        return 0;
+      }
+
+      /* Send a message to ReaderTask to start or continue reading operation. */
+
+      cmd = (piflac->read_index < 0)? READER_START : READ_BUFFER;
+      osMessageQueuePut(piflac->readqId, &cmd, 0, 0);
+
+      /* Wait until stream data became available. */
+      st = osSemaphoreAcquire(piflac->sendsemId, 50);
+      if (st < 0)
+      {
+        debug_printf("read fail %d.\n", st);
+        osSemaphoreAcquire(piflac->sendsemId, osWaitForever);
+      }
+
+      BUFFER_DESC *bdesc = &flac_reader_buffer[piflac->send_index];
+
+      if (bdesc->dlen)
+      {
+        memcpy(pBufferOut, bdesc->buffer, bdesc->dlen);
+        piflac->send_index++;
+        if (piflac->send_index == READB_FACTOR)
+          piflac->send_index = 0;
+      }
+      else
+      {
+        piflac->send_index = -1;	// Mark that we reached at end of the stream
+      }
+      osSemaphoreRelease(piflac->readsemId);
+      return bdesc->dlen;
+    }
+#else
     res = f_read(piflac->pfile, pBufferOut, bytesToRead, &nread);
     if (res == FR_OK)
-       return nread;
+      return nread;
+#endif
     return -1;
 }
 
@@ -253,6 +339,7 @@ static void drflac_close_fatfs(drflac* pFlac)
     }
 
     FLACINFO *piflac;
+    uint16_t cmd;
     piflac = (FLACINFO *)pFlac->bs.pUserData;
 
     /*
@@ -260,6 +347,8 @@ static void drflac_close_fatfs(drflac* pFlac)
     was used by looking at the callbacks.
     */
     if (pFlac->bs.onRead == drflac__on_read_fatfs) {
+        cmd = READER_STOP;
+        osMessageQueuePut(piflac->readqId, &cmd, 0, 0);
         CloseFlacFile(piflac->pfile);
     }
 
@@ -391,6 +480,88 @@ static int process_fft(FFTINFO *fftInfo, AUDIO_STEREO *pmusic, int frames)
   return 0;	/* No FFT result available. */
 }
 
+#ifdef USE_SD_PRE_READ
+/**
+ * @brief FLAC file reader task
+ */
+static void StartReaderTask(void *args)
+{
+  FLACINFO *flacInfo = &FlacInfo;
+  osStatus st;
+  uint16_t cmd;
+  FRESULT res;
+  UINT nread;
+  BUFFER_DESC *bdesc;
+
+  while (1)
+  {
+    st = osMessageQueueGet(flacInfo->readqId, &cmd, 0, osWaitForever);
+
+    if (st == osOK)
+    {
+      switch (cmd)
+      {
+      case READER_START:
+#ifdef MIX_DEBUG
+        debug_printf("READER_START\n");
+#endif
+        if (flacInfo->reader_status == READER_STOPPED)
+        {
+          flacInfo->reader_status = READER_RUNNING;
+          flacInfo->read_index = flacInfo->send_index = 0;
+          cmd = READ_BUFFER;
+          osMessageQueuePut(flacInfo->readqId, &cmd, 0, 0);
+        }
+        break;
+      case READ_BUFFER:
+        if (flacInfo->reader_status == READER_STOPPED)
+          break;
+        if (osSemaphoreAcquire(flacInfo->readsemId, 0) == osOK)
+        {
+          bdesc = &flac_reader_buffer[flacInfo->read_index];
+          res = f_read(flacInfo->pfile, bdesc->buffer, DR_FLAC_BUFFER_SIZE, &nread);
+          if (res == FR_OK)
+          {
+            bdesc->dlen = nread;
+            flacInfo->read_index++;
+            if (flacInfo->read_index == READB_FACTOR)
+              flacInfo->read_index = 0;
+            osSemaphoreRelease(flacInfo->sendsemId);
+            if (nread > 0)
+            {
+              if (osSemaphoreGetCount(flacInfo->readsemId) > 0)
+              {
+                uint16_t next_cmd = READ_BUFFER;
+                osMessageQueuePut(flacInfo->readqId, &next_cmd, 0, 0);
+              }
+            }
+          }
+          else
+          {
+            debug_printf("f_read error %d\n", res);
+          }
+        }
+        break;
+      case READER_STOP:
+#ifdef MIX_DEBUG
+        debug_printf("READER_STOP\n");
+#endif
+        while (osSemaphoreGetCount(flacInfo->readsemId) != READB_FACTOR)
+          osSemaphoreRelease(flacInfo->readsemId);
+        while (osSemaphoreGetCount(flacInfo->sendsemId) > 0)
+          osSemaphoreAcquire(flacInfo->sendsemId, osWaitForever);
+        flacInfo->read_index = -1;
+        flacInfo->send_index = 0;
+        flacInfo->reader_status = READER_STOPPED;
+        break;
+      default:
+        break;
+      }
+    }
+  }
+}
+#endif
+
 static void StartMixPlayerTask(void *args)
 {
   drflac_uint64 num_read;
@@ -416,6 +587,15 @@ static void StartMixPlayerTask(void *args)
   /* Prepare silent sound data. */
   memset((void *)SilentBuffer, 0, sizeof(SilentBuffer));
 
+  flacInfo->readqId = osMessageQueueNew(MIXREADQ_DEPTH, sizeof(uint16_t), &attributes_flacreadq);
+  flacInfo->readsemId = osSemaphoreNew(READB_FACTOR, READB_FACTOR, &attributes_flac_readsem);
+  flacInfo->sendsemId = osSemaphoreNew(READB_FACTOR, 0, &attributes_flac_sendsem);
+  flacInfo->read_index = flacInfo->send_index = 0;
+  flacInfo->reader_status = READER_STOPPED;
+
+#ifdef USE_SD_PRE_READ
+  osThreadNew(StartReaderTask, NULL, &attributes_flacreader);
+#endif
 
   fftInfo = &FftInfo;
   fft_count = 0;
@@ -459,13 +639,19 @@ static void StartMixPlayerTask(void *args)
     switch (ctrl.event)
     {
     case MIX_PLAY:		// Start playing specified FLAC file
+#ifdef MIX_DEBUG
+      debug_printf("MIX_PLAY\n");
+#endif
       if (mixInfo->state != MIX_ST_IDLE)
       {
         debug_printf("MIX_PLAY: Bad state\n");
         osDelay(10*1000);
       }
+      while (flacInfo->reader_status != READER_STOPPED)
+        osDelay(10);
 
       pflac = drflac_open_fatfile(ctrl.arg, &allocationCallbacks);
+      flacInfo->read_index = -1;
       mixInfo->ppos = mixInfo->psec = 0;
       fft_count = 0;
       flacInfo->loop_count = ctrl.option;
@@ -542,6 +728,9 @@ static void StartMixPlayerTask(void *args)
         mixInfo->ppos += NUM_FRAMES;
         if (ctrl.option == 0)
         {
+#ifdef MIX_BUSY0_Pin
+          HAL_GPIO_WritePin(MIX_BUSY0_Port, MIX_BUSY0_Pin, GPIO_PIN_SET);
+#endif
           /* If we need to loop back, seek to start position. */
           if ((flacInfo->loop_count != 0) && (flacInfo->pcm_pos >= flacInfo->loop_end))
           {
@@ -551,6 +740,9 @@ static void StartMixPlayerTask(void *args)
         }
         else
         {
+#ifdef MIX_BUSY1_Pin
+          HAL_GPIO_WritePin(MIX_BUSY1_Port, MIX_BUSY1_Pin, GPIO_PIN_SET);
+#endif
           pmusic += NUM_FRAMES;
         }
 #ifdef MIX_DEBUG
@@ -623,6 +815,12 @@ static void StartMixPlayerTask(void *args)
         pDriver->MixSound(audio_config, pmusic, mix_frames);
 #ifdef MIX_DEBUG
         debug_printf("Mix2 (%d), %d @ %d\n", ctrl.option, mixInfo->ppos, flacInfo->pcm_pos);
+#endif
+#ifdef MIX_BUSY0_Pin
+        if (ctrl.option)
+          HAL_GPIO_WritePin(MIX_BUSY1_Port, MIX_BUSY1_Pin, GPIO_PIN_RESET);
+        else
+          HAL_GPIO_WritePin(MIX_BUSY0_Port, MIX_BUSY0_Pin, GPIO_PIN_RESET);
 #endif
         break;
       case MIX_ST_IDLE:
@@ -1007,6 +1205,9 @@ void mix_request_data(int full)
   MIXCONTROL_EVENT evcode;
   int st;
 
+#ifdef MIX_PLAY_Pin
+ HAL_GPIO_TogglePin(MIX_PLAY_Port, MIX_PLAY_Pin);
+#endif
   evcode.event = MIX_DATA_REQ;
   evcode.option = full;
   st = osMessageQueuePut(MixInfo.mixevqId, &evcode, 0, 0);
