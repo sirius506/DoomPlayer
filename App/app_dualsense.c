@@ -256,7 +256,7 @@ void dualtest_update(struct gamepad_inputs *rp, uint32_t vbutton)
     mask <<= 1;
   }
 
-  /* Draw toch pad position */
+  /* Draw touch pad position */
 
   tp = &rp->points[0];		// first point
   if (tp->contact & 0x80)
