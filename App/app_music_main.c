@@ -351,6 +351,7 @@ void _lv_demo_music_album_next(bool next)
         _lv_demo_music_play(id);
     }
     else {
+        Mix_HaltMusic();
         track_load(id);
     }
 }
