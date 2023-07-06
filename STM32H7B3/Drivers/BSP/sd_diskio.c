@@ -286,6 +286,9 @@ DRESULT SD_read(BYTE lun, BYTE *buff, DWORD sector, UINT count)
 
     if (ret == MSD_OK) {
     HAL_GPIO_WritePin(USER_LED2_GPIO_Port, USER_LED2_Pin, GPIO_PIN_RESET);
+#ifdef MIX_FLAC_Pin
+    HAL_GPIO_WritePin(MIX_FLAC_Port, MIX_FLAC_Pin, GPIO_PIN_SET);
+#endif
 #if (osCMSIS < 0x20000U)
     /* wait for a message from the queue or a timeout */
     event = osMessageGet(SDQueueID, SD_TIMEOUT);
@@ -327,6 +330,9 @@ DRESULT SD_read(BYTE lun, BYTE *buff, DWORD sector, UINT count)
       }
 #endif
       HAL_GPIO_WritePin(USER_LED2_GPIO_Port, USER_LED2_Pin, GPIO_PIN_SET);
+#ifdef MIX_FLAC_Pin
+      HAL_GPIO_WritePin(MIX_FLAC_Port, MIX_FLAC_Pin, GPIO_PIN_RESET);
+#endif
     }
 
 #if defined(ENABLE_SCRATCH_BUFFER)
@@ -339,6 +345,9 @@ DRESULT SD_read(BYTE lun, BYTE *buff, DWORD sector, UINT count)
       ret = MSD_OK;
 
       HAL_GPIO_WritePin(USER_LED2_GPIO_Port, USER_LED2_Pin, GPIO_PIN_RESET);
+#ifdef MIX_FLAC_Pin
+      HAL_GPIO_WritePin(MIX_FLAC_Port, MIX_FLAC_Pin, GPIO_PIN_SET);
+#endif
 
       for (i = 0; i < count; i++)
       {
@@ -401,6 +410,9 @@ DRESULT SD_read(BYTE lun, BYTE *buff, DWORD sector, UINT count)
         }
       }
       HAL_GPIO_WritePin(USER_LED2_GPIO_Port, USER_LED2_Pin, GPIO_PIN_SET);
+#ifdef MIX_FLAC_Pin
+      HAL_GPIO_WritePin(MIX_FLAC_Port, MIX_FLAC_Pin, GPIO_PIN_RESET);
+#endif
 
       if ((i == count) && (ret == MSD_OK ))
         res = RES_OK;
