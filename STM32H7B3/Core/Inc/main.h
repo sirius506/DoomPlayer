@@ -297,6 +297,7 @@ void Error_Handler(void);
 #define	SLEEP_Port	TEST3_GPIO_Port
 #endif
 
+#ifdef SPECTRUM_TEST
 #define	SPECTRUM_Pin	TEST0_Pin
 #define	SPECTRUM_Port	TEST0_GPIO_Port
 #define	LV_TIMER_Pin	TEST1_Pin
@@ -305,6 +306,16 @@ void Error_Handler(void);
 #define	FLAC_Port	TEST2_GPIO_Port
 #define	SLEEP_Pin	TEST3_Pin
 #define	SLEEP_Port	TEST3_GPIO_Port
+#endif
+
+#define	MIX_BUSY0_Pin	TEST0_Pin
+#define	MIX_BUSY0_Port	TEST0_GPIO_Port
+#define	MIX_BUSY1_Pin	TEST1_Pin
+#define	MIX_BUSY1_Port	TEST1_GPIO_Port
+#define	MIX_PLAY_Pin	TEST2_Pin
+#define	MIX_PLAY_Port	TEST2_GPIO_Port
+#define	MIX_FLAC_Pin	TEST3_Pin
+#define	MIX_FLAC_Port	TEST3_GPIO_Port
 
 /* USER CODE BEGIN Private defines */
 
