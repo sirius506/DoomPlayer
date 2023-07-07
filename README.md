@@ -26,6 +26,12 @@ Game part is based on [Chocolate-doom 3.0.1](https://www.chocolate-doom.org/).
 
 Please refer [Wiki pages](https://github.com/sirius506/DoomPlayer/wiki) for more descriptions and screen shot images.
 
+## Video
+
+[![Watch the video](https://img.youtube.com/vi/CdiyeQ8wwEw/0.jpg)](https://youtu.be/vi/CdiyeQ8wwEw)
+
+[![Doom Game](https://img.youtube.com/vi/sud6zXLr01I/0.jpg)](https://youtu.be/sud6zXLr01I)
+
 ## Get started
 * Download target .elf and gamedata.zip files from latest [release](https://github.com/sirius506/DoomPlayer/releases).
 * Write the target .elf image to the target Disovery board's MCU flash. You can use STM32Prog for the operation.
