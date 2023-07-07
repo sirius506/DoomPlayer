@@ -145,12 +145,6 @@ static USBH_StatusTypeDef USBH_AUDIO_SetEndpointControls(USBH_HandleTypeDef *pho
                                                          uint8_t  Ep,
                                                          uint8_t *buff);
 
-#if 0
-static USBH_StatusTypeDef AUDIO_SetVolume(USBH_HandleTypeDef *phost, uint8_t feature, uint8_t channel, uint16_t volume);
-
-static USBH_StatusTypeDef USBH_AUDIO_Control(USBH_HandleTypeDef *phost);
-static USBH_StatusTypeDef USBH_AUDIO_SetControlAttribute(USBH_HandleTypeDef *phost, uint8_t attrib);
-#endif
 static uint32_t USBH_AUDIO_FindLinkedUnit(USBH_ClassTypeDef *pclass, USBH_HandleTypeDef *phost, uint8_t UnitID);
 
 SECTION_USBSRAM AUDIO_HandleTypeDef AudioHandleBuffer;
@@ -406,7 +400,7 @@ debug_printf("usb freq = %d --> %d\n", AUDIO_Handle->sampleFreq, max_msec);
       if ((AUDIO_Handle->play_state == AUDIO_PLAYBACK_PLAY) && done_flag)
       {
 
-        SCB_CleanDCache();
+        SCB_CleanDCache_by_Addr(audio_conf->playbuffer_ptr, msec_frames);
         if (audio_conf->play_index >= max_msec)
         {
           audio_conf->play_index = 0;
@@ -709,32 +703,6 @@ static USBH_StatusTypeDef USBH_AUDIO_InterfaceDeInit(USBH_ClassTypeDef *pclass, 
   }
   return USBH_OK ;
 }
-
-/**
-  * @brief  USBH_AUDIO_Process
-  *         The function is for managing state machine for Audio data transfers
-  * @param  phost: Host handle
-  * @retval USBH Status
-  */
-#if 0
-static USBH_StatusTypeDef USBH_AUDIO_Process(USBH_HandleTypeDef *phost)
-{
-  USBH_StatusTypeDef status = USBH_BUSY;
-  AUDIO_HandleTypeDef *AUDIO_Handle = (AUDIO_HandleTypeDef *)  phost->pActiveClassList->pData;
-
-  if (AUDIO_Handle->headphone.supported == 1U)
-  {
-    //(void)USBH_AUDIO_OutputStream(phost);
-  }
-
-  if (AUDIO_Handle->microphone.supported == 1U)
-  {
-    (void)USBH_AUDIO_InputStream(phost);
-  }
-
-  return status;
-}
-#endif
 
 /**
   * @brief  USBH_AUDIO_SOFProcess
