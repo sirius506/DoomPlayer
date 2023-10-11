@@ -58,7 +58,7 @@ SEMAPHORE_DEF(flac_sendsem)
  * SilentBuffer is used to generate silience.
  */
 static SECTION_AUDIOSRAM AUDIO_STEREO MusicFrameBuffer[BUF_FRAMES];
-static SECTION_AUDIOSRAM AUDIO_STEREO SilentBuffer[BUF_FRAMES];
+static const AUDIO_STEREO SilentBuffer[BUF_FRAMES];
 
 #define	NUMTAPS	31
 
