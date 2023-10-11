@@ -90,6 +90,8 @@ static uint8_t hcievqBuffer[HCIEVQ_DEPTH * sizeof( HCIEVT ) ];
 MESSAGEQ_DEF(hcievq, hcievqBuffer, sizeof(hcievqBuffer))
 
 static SECTION_USBSRAM uint8_t evbuffqBuffer[BUFFQ_DEPTH * EVB_SIZE];
+static SECTION_USBSRAM uint8_t cmd_temp_buffer[16];
+
 static uint8_t *evptrBuffer[BUFFQ_DEPTH];
 
 MESSAGEQ_DEF(evbuffq, evptrBuffer, sizeof(evptrBuffer))
@@ -557,11 +559,25 @@ debug_printf("st1 = %d\n", st);
       phost->Control.setup.b.wLength.w = cmd_len;
       SCB_CleanInvalidateDCache();
       usbh_out_state = USBH_OUT_CMD;
-      USBH_CtlReq(phost, (uint8_t *) cmd_packet, cmd_len);
-      do
+
+      if ((int)cmd_packet & 3)
       {
-        status = USBH_CtlReq(phost, (uint8_t *) cmd_packet, cmd_len);
-      } while (status == USBH_BUSY);
+        /* USB DMA requires data aligned at 4 byte boundary */
+        memcpy(cmd_temp_buffer, cmd_packet, cmd_len);
+        USBH_CtlReq(phost, (uint8_t *) cmd_temp_buffer, cmd_len);
+        do
+        {
+          status = USBH_CtlReq(phost, (uint8_t *) cmd_temp_buffer, cmd_len);
+        } while (status == USBH_BUSY);
+      }
+      else
+      {
+        USBH_CtlReq(phost, (uint8_t *) cmd_packet, cmd_len);
+        do
+        {
+          status = USBH_CtlReq(phost, (uint8_t *) cmd_packet, cmd_len);
+        } while (status == USBH_BUSY);
+      }
       osEventFlagsClear(info->dongle_flagId, BTOUT_CMD_BIT);
     }
     if (req_flags & BTOUT_ACL_BIT)
