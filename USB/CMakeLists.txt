@@ -7,6 +7,7 @@ set(USBSRCS
   usbh_hid_keybd.c
   dualsense.c
   dualshock4.c
+  8bitdozero2.c
   gamepad.c
   usbh_hid_parser.c
   usbh_ioreq.c

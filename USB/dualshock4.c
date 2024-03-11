@@ -16,8 +16,6 @@
 #define	REPORT_SIZE	sizeof(struct ds4_input_report)
 
 SECTION_USBSRAM uint8_t ds4calibdata[DS4_FEATURE_REPORT_CALIBRATION_SIZE+4];
-SECTION_USBSRAM uint8_t ds4_rx_buf[REPORT_SIZE+4];
-SECTION_USBSRAM uint8_t ds4_rx_report_buf[REPORT_SIZE*5];
 SECTION_USBSRAM DS4_INPUT_REPORT ds4_cur_report;
 SECTION_USBSRAM struct ds4_usb_output_report ds4_out_report;
 SECTION_USBSRAM struct ds4_bt_output_report bt_out_report[2];
@@ -220,22 +218,17 @@ static void DualShockSetup(USBH_ClassTypeDef *pclass)
   memset(ds4calibdata, 0, sizeof(ds4calibdata));
   st = USBH_HID_GetReport(pclass->phost, 3, DS4_FEATURE_REPORT_CALIBRATION, ds4calibdata, DS4_FEATURE_REPORT_CALIBRATION_SIZE);
 
-  (void) st;
-  process_calibdata(&DsData, ds4calibdata, 0);
+  if (st == 0)
+    process_calibdata(&DsData, ds4calibdata, 0);
+  else
+    debug_printf("can't get calib data.\n");
 
   set_joystick_params();
 }
 
 static USBH_StatusTypeDef DualShockInit(USBH_ClassTypeDef *pclass, USBH_HandleTypeDef *phost)
 {
-  HID_HandleTypeDef *HID_Handle = (HID_HandleTypeDef *) pclass->pData;
-
-  if (HID_Handle->length > sizeof(ds4_rx_report_buf))
-  {
-    HID_Handle->length = sizeof(ds4_rx_report_buf);
-  }
-  HID_Handle->pData = HID_Handle->report.ptr = (uint8_t *)(void *)ds4_rx_buf;
-  USBH_HID_FifoInit(&HID_Handle->fifo, phost->device.Data, sizeof(ds4_rx_report_buf));
+  GamepadHidInit((HID_HandleTypeDef *) pclass->pData, phost, REPORT_SIZE+4);
 
   postGuiEventMessage(GUIEV_USB_AUDIO_READY, 0, (void *)&DualShockUsbAudio, NULL);
   return USBH_OK;

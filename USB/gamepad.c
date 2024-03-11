@@ -27,6 +27,7 @@ static GAMEPAD_INFO GamePadInfo;
 struct sGamePad KnownGamePads[] = {
   { VID_SONY, PID_DUALSHOCK, "DualShock4", &DualShockDriver },
   { VID_SONY, PID_DUALSENSE, "DualSense",  &DualSenseDriver },
+  { VID_SONY, PID_ZERO2,     "8BitDo Zero 2",  &Zero2Driver },
 };
 
 GAMEPAD_INFO *IsSupportedGamePad(uint16_t vid, uint16_t pid)
@@ -45,6 +46,7 @@ GAMEPAD_INFO *IsSupportedGamePad(uint16_t vid, uint16_t pid)
     }
     gp++;
   }
+  debug_printf("This gamepad is not supported.\n");
   return NULL;
 }
 
@@ -64,6 +66,34 @@ void GamepadHidMode(GAMEPAD_INFO *padInfo, int mode)
     pev.state = modemap[mode];
     osMessageQueuePut(padInfo->pclass->classEventQueue, &pev, 0, 0);
   }
+}
+
+SECTION_USBSRAM uint8_t gamepad_report_data[100];
+SECTION_USBSRAM uint8_t gamepad_rx_report_buf[100];
+
+#define GAMEPAD_QUEUE_SIZE	7
+
+USBH_StatusTypeDef GamepadHidInit(HID_HandleTypeDef *HID_Handle, USBH_HandleTypeDef *phost, int report_size)
+{
+  if (HID_Handle->length > report_size)
+  {
+    HID_Handle->length = report_size;
+  }
+  HID_Handle->pData = HID_Handle->report.ptr = gamepad_rx_report_buf;
+
+  debug_printf("%s: %d, %d\n", __FUNCTION__, GAMEPAD_QUEUE_SIZE * report_size, sizeof(phost->device.Data));
+  if ((GAMEPAD_QUEUE_SIZE * report_size) > sizeof(phost->device.Data))
+  {
+    debug_printf("Bad report_size: %d\n", report_size);
+    return USBH_FAIL;
+  }
+  else
+  {
+#ifdef USE_HID_FIFO
+    USBH_HID_FifoInit(&HID_Handle->fifo, phost->device.Data, (uint16_t)(GAMEPAD_QUEUE_SIZE * report_size));
+#endif
+  }
+  return USBH_OK;
 }
 
 static const uint8_t output_seed[] = { PS_OUTPUT_CRC32_SEED };

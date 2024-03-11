@@ -7,6 +7,7 @@
 #define	VID_SONY	0x054C
 #define	PID_DUALSHOCK	0x09CC
 #define	PID_DUALSENSE	0x0CE6
+#define	PID_ZERO2	0x05C4
 
 /*
  * Vertual Button bitmask definitions
@@ -100,6 +101,7 @@ extern FUSION_ANGLE ImuAngle;
 
 extern const struct sGamePadDriver DualShockDriver;
 extern const struct sGamePadDriver DualSenseDriver;
+extern const struct sGamePadDriver Zero2Driver;
 
 extern GAMEPAD_INFO *IsSupportedGamePad(uint16_t vid, uint16_t pid);
 extern int get_bt_hid_mode();
@@ -112,4 +114,5 @@ extern void gamepad_process_fusion(float sample_period, FusionVector gyroscope, 
 extern void Display_GamePad_Info(struct gamepad_inputs *rp, uint32_t vbutton);
 extern void GamepadHidMode(GAMEPAD_INFO *padInfo, int mode_bit);
 extern void gamepad_reset_fusion(void);
+extern USBH_StatusTypeDef GamepadHidInit(HID_HandleTypeDef *HID_Handle, USBH_HandleTypeDef *phost, int report_size);
 #endif

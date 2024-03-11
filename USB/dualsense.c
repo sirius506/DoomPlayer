@@ -17,8 +17,6 @@
 
 SECTION_USBSRAM uint8_t calibdata[DS_FEATURE_REPORT_CALIBRATION_SIZE+3];
 SECTION_USBSRAM uint8_t firmdata[DS_FEATURE_REPORT_FIRMWARE_INFO_SIZE+3];
-SECTION_USBSRAM uint8_t dual_rx_buf[REPORT_SIZE+4];
-SECTION_USBSRAM uint8_t dual_rx_report_buf[REPORT_SIZE*5];
 SECTION_USBSRAM struct dualsense_input_report cur_report;
 SECTION_USBSRAM struct dualsense_usbout_report out_report;
 
@@ -263,14 +261,7 @@ static void DualSenseResetFusion()
 
 static USBH_StatusTypeDef DualSenseInit(USBH_ClassTypeDef *pclass, USBH_HandleTypeDef *phost)
 {
-  HID_HandleTypeDef *HID_Handle = (HID_HandleTypeDef *) pclass->pData;
-
-  if (HID_Handle->length > sizeof(dual_rx_report_buf))
-  {
-    HID_Handle->length = sizeof(dual_rx_report_buf);
-  }
-  HID_Handle->pData = HID_Handle->report.ptr = (uint8_t *)(void *)dual_rx_buf;
-  USBH_HID_FifoInit(&HID_Handle->fifo, phost->device.Data, sizeof(dual_rx_report_buf));
+  GamepadHidInit((HID_HandleTypeDef *) pclass->pData, phost, REPORT_SIZE+4);
 
   postGuiEventMessage(GUIEV_USB_AUDIO_READY, 0, (void *)&DualSenseUsbAudio, NULL);
   return USBH_OK;

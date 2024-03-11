@@ -60,15 +60,6 @@ typedef struct _HIDDescriptor
 }
 HID_DescTypeDef;
 
-typedef struct
-{
-  uint8_t  *buf;
-  uint16_t  head;
-  uint16_t tail;
-  uint16_t size;
-  uint8_t  lock;
-} FIFO_TypeDef;
-
 #define	HID_MODE_LVGL	0
 #define	HID_MODE_TEST	1
 #define	HID_MODE_DOOM	2
@@ -88,7 +79,6 @@ typedef struct _HID_Process
   uint8_t              OutEp;
   uint8_t              InEp;
   HID_CtlStateTypeDef  ctl_state;
-  FIFO_TypeDef         fifo;
   uint8_t              devType;
   uint8_t              *pData;
   uint16_t             length;
@@ -121,7 +111,6 @@ HID_HandleTypeDef;
 
 USBH_StatusTypeDef USBH_HID_GetHIDReportDescriptor(USBH_HandleTypeDef *phost, uint16_t length);
 
-void USBH_HID_FifoInit(FIFO_TypeDef *f, uint8_t *buf, uint16_t size);
 USBH_StatusTypeDef USBH_HID_GetReport(USBH_HandleTypeDef *phost, uint8_t reportType,
                                       uint8_t reportId, uint8_t *reportBuff, uint8_t reportLen);
 #endif

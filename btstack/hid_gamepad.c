@@ -263,9 +263,9 @@ static void handle_sdp_client_query_result(uint8_t packet_type, uint16_t channel
     }
     break;
   case SDP_EVENT_QUERY_COMPLETE:
-      break;
+    break;
   default:
-      break;
+    break;
   }
 }
 

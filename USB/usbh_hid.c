@@ -32,8 +32,6 @@ static void  USBH_HID_ParseHIDDesc(HID_DescTypeDef *desc, uint8_t *buf);
 
 USBH_StatusTypeDef USBH_HID_SetIdle(USBH_HandleTypeDef *phost, uint8_t duration, uint8_t reportId);
 
-uint16_t USBH_HID_FifoWrite(FIFO_TypeDef *f, void *buf, uint16_t  nbytes);
-
 SECTION_USBSRAM HID_HandleTypeDef HidHandleBuffer;
 
 #define HID_STACK_SIZE  650
@@ -490,67 +488,6 @@ USBH_StatusTypeDef USBH_HID_SetIdle(USBH_HandleTypeDef *phost,
   } while (status == USBH_BUSY);
 
   return status;
-}
-
-/**
-  * @brief  USBH_HID_FifoInit
-  *         Initialize FIFO.
-  * @param  f: Fifo address
-  * @param  buf: Fifo buffer
-  * @param  size: Fifo Size
-  * @retval none
-  */
-void USBH_HID_FifoInit(FIFO_TypeDef *f, uint8_t *buf, uint16_t size)
-{
-  f->head = 0U;
-  f->tail = 0U;
-  f->lock = 0U;
-  f->size = size;
-  f->buf = buf;
-}
-
-/**
-  * @brief  USBH_HID_FifoRead
-  *         Read from FIFO.
-  * @param  f: Fifo address
-  * @param  buf: read buffer
-  * @param  nbytes: number of item to read
-  * @retval number of read items
-  */
-uint16_t USBH_HID_FifoRead(FIFO_TypeDef *f, void *buf, uint16_t nbytes)
-{
-  uint16_t i;
-  uint8_t *p;
-
-  p = (uint8_t *) buf;
-
-  if (f->lock == 0U)
-  {
-    f->lock = 1U;
-
-    for (i = 0U; i < nbytes; i++)
-    {
-      if (f->tail != f->head)
-      {
-        *p++ = f->buf[f->tail];
-        f->tail++;
-
-        if (f->tail == f->size)
-        {
-          f->tail = 0U;
-        }
-      }
-      else
-      {
-        f->lock = 0U;
-        return i;
-      }
-    }
-  }
-
-  f->lock = 0U;
-
-  return nbytes;
 }
 
 /**
