@@ -20,6 +20,8 @@
 
 #define QSPI_ADDR       0x90000000
 
+#define SND_CACHESIZE   (2 * 1024 * 1024)       /* DOOM sound cache size */
+
 /*
  * SDRAM Area: D0000000 - D0FFFFFF (16MB)
  *

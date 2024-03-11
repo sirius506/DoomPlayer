@@ -21,6 +21,7 @@
 #ifdef USE_SDL
 #include "SDL_mixer.h"
 #endif
+#include "targetdev_conf.h"
 
 #include "config.h"
 #include "doomtype.h"
@@ -38,7 +39,7 @@ int snd_samplerate = 44100;
 // Maximum number of bytes to dedicate to allocated sound effects.
 // (Default: 64MB)
 
-int snd_cachesize = 64 * 1024 * 1024;
+int snd_cachesize = SND_CACHESIZE;
 
 // Config variable that controls the sound buffer size.
 // We default to 28ms (1000 / 35fps = 1 buffer per tic).
