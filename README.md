@@ -28,7 +28,7 @@ Please refer [Wiki pages](https://github.com/sirius506/DoomPlayer/wiki) for more
 
 ## Video
 
-[![Watch the video](https://img.youtube.com/vi/CdiyeQ8wwEw/0.jpg)]([https://youtu.be/CdiyeQ8wwEw)
+[![Watch the video](https://img.youtube.com/vi/CdiyeQ8wwEw/0.jpg)]([https://youtu.be/CdiyeQ8wwEw])
 
 [![Doom Game](https://img.youtube.com/vi/sud6zXLr01I/0.jpg)](https://youtu.be/sud6zXLr01I)
 
